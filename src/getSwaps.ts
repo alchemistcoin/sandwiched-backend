@@ -6,7 +6,10 @@ import { getLogs } from './getLogs';
 import * as ABIs from './abis';
 import { BigNumber } from 'ethers';
 
-const web3 = new Web3(process.env.WEB3_PROVIDER_URI);
+enum SwapDir {
+    ZeroToOne,
+    OneToZero,
+}
 
 interface SwapParams {
     sender: string;
@@ -16,28 +19,28 @@ interface SwapParams {
     amount1Out: BigNumber;
     to: string;
     event: string;
+    dir: SwapDir;
 }
 
-interface SwapLog extends Log {
+export interface SwapLog extends Log {
     swap: SwapParams;
 }
 
 export async function getSwaps(
+    web3: Web3,
     pool: string = null,
     router: string = null,
     wallet: string = null,
+    fromBlock = 0,
+    toBlock = 99999999,
 ): Promise<SwapLog[]> {
-    //  const fromBlock = 0;
-    //  const maxBlock = 99999999;
-
-    //    let bn = await web3.eth.getBlockNumber();
     const topics = [
-        ABIs.Binary.Swap,
-        web3.eth.abi.encodeParameter('address', router),
-        web3.eth.abi.encodeParameter('address', wallet),
+        ABIs.Binary.Swap, // or with ethers: utils.id('Swap(address,uint256,uint256,uint256,uint256,address)')
+        router ? web3.eth.abi.encodeParameter('address', router) : null,
+        wallet ? web3.eth.abi.encodeParameter('address', wallet) : null,
     ];
 
-    const all = await getLogs(web3, 11908528, 11908540, pool, topics);
+    const all = await getLogs(web3, fromBlock, toBlock, pool, topics);
 
     const mapped = all.map((r) => {
         // raw:
@@ -80,6 +83,17 @@ export async function getSwaps(
             .mapValues((value) => ABIs.JSON[value])
             .value();
 
+        // const abi = [
+        //     'event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address indexed to)'
+        // ]
+        // const iface = new utils.Interface(abi)
+        // const logDesc = iface.parseLog({topics: r.topics, data: r.data});
+        // console.log("parsed log");
+        // console.log(JSON.stringify(logDesc, null, 2));
+
+        // console.log("decoded log");
+        // console.log(JSON.stringify(iface.decodeEventLog("Swap", r.data, r.topics), null, 2));
+
         const decoded = web3.eth.abi.decodeLog(
             sigToJSON[r.topics[0]],
             r.data,
@@ -95,13 +109,23 @@ export async function getSwaps(
             ]),
             BigNumber.from,
         );
+        const dir = bignums.amount0In.isZero()
+            ? SwapDir.ZeroToOne
+            : SwapDir.OneToZero;
+
         return {
             ...r,
             swap: {
                 ...bignums,
                 ..._.pick(decoded, ['sender', 'to', 'event']),
+                dir,
             },
         };
     });
+    const sorted = _.sortBy(mapped, 'blockNumber', 'transactionIndex');
+    if (!_.isEqual(sorted, mapped)) {
+        // don't expect this to happen, but check for sanity.
+        throw 'Not sorted!';
+    }
     return mapped;
 }

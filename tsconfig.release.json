@@ -4,7 +4,7 @@
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
         "rootDir": ".",
-        "outDir": "build",
+        "outDir": "dist",
         "removeComments": true
     },
     "include": ["src/**/*"]
