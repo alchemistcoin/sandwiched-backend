@@ -1,32 +1,17 @@
-/**
- * Some predefined delays (in milliseconds).
- */
-export enum Delays {
-  Short = 500,
-  Medium = 2000,
-  Long = 5000,
-}
+import { getSwaps } from './pull-data';
+import _ from 'lodash';
 
-/**
- * Returns a Promise<string> that resolves after given time.
- *
- * @param {string} name - A name.
- * @param {number=} [delay=Delays.Medium] - Number of milliseconds to delay resolution of the Promise.
- * @returns {Promise<string>}
- */
-function delayedHello(
-  name: string,
-  delay: number = Delays.Medium,
-): Promise<string> {
-  return new Promise((resolve: (value?: string) => void) =>
-    setTimeout(() => resolve(`Hello, ${name}`), delay),
-  );
-}
+import { addresses } from '../src/addresses';
 
-// Below are examples of using ESLint errors suppression
-// Here it is suppressing missing return type definitions for greeter function
+const wallet = '0xb1adceddb2941033a090dd166a462fe1c2029484';
+const pool = '0x56feAccb7f750B997B36A68625C7C596F0B41A58'; // FARM
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export async function greeter(name: string) {
-  return await delayedHello(name, Delays.Long);
-}
+(async function () {
+    const events = await getSwaps(pool, addresses.uniswapV2Router, wallet);
+    const sorted = _.sortBy(events, 'blockNumber', 'transactionIndex');
+    if (!_.isEqual(sorted, events)) {
+        // don't expect this to happen, but check for sanity.
+        console.error('Not sorted!');
+    }
+    console.log(JSON.stringify(sorted, null, 2));
+})();

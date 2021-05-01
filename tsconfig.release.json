@@ -1,9 +1,11 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "build",
-    "removeComments": true
-  },
-  "include": ["src/**/*"]
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "rootDir": ".",
+        "outDir": "build",
+        "removeComments": true
+    },
+    "include": ["src/**/*"]
 }
