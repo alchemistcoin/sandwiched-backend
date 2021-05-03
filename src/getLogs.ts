@@ -1,5 +1,6 @@
 import Web3 from 'web3';
 import { Log } from 'web3-core';
+import winston from 'winston';
 
 import * as blocknumber from './blocknumber';
 
@@ -12,6 +13,7 @@ import * as blocknumber from './blocknumber';
 // than 10k events).
 export async function getLogs(
     web3: Web3,
+    log: winston.Logger,
     fromBlock: blocknumber.T,
     toBlock: blocknumber.T,
     address: string,
@@ -25,6 +27,7 @@ export async function getLogs(
     }
     if (blocknumber.less(fromBlock, toBlock)) {
         try {
+            log.silly(`getLogs: ${address} ${fromBlock} ${toBlock}`);
             return await web3.eth.getPastLogs({
                 //            return await provider.getLogs({
                 address,
@@ -44,6 +47,7 @@ export async function getLogs(
                 1;
             const arr1 = await getLogs(
                 web3,
+                log,
                 fromBlock,
                 midBlock,
                 address,
@@ -51,6 +55,7 @@ export async function getLogs(
             );
             const arr2 = await getLogs(
                 web3,
+                log,
                 midBlock + 1,
                 toBlock,
                 address,

@@ -1,6 +1,7 @@
 import Web3 from 'web3';
 import { Log } from 'web3-core';
 import _ from 'lodash';
+import winston from 'winston';
 
 import { getLogs } from './getLogs';
 import * as ABIs from './abis';
@@ -28,6 +29,7 @@ export interface SwapLog extends Log {
 
 export async function getSwaps(
     web3: Web3,
+    log: winston.Logger,
     pool: string = null,
     router: string = null,
     wallet: string = null,
@@ -40,7 +42,7 @@ export async function getSwaps(
         wallet ? web3.eth.abi.encodeParameter('address', wallet) : null,
     ];
 
-    const all = await getLogs(web3, fromBlock, toBlock, pool, topics);
+    const all = await getLogs(web3, log,fromBlock, toBlock, pool, topics);
 
     const mapped = all.map((r) => {
         // raw:

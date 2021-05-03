@@ -1,14 +1,13 @@
 import Web3 from 'web3';
-import { getSwaps } from './getSwaps';
-import { findSandwich } from './findSandwich';
-
+import winston from 'winston';
 import yargs from 'yargs';
 
+import { getSwaps } from '../src/getSwaps';
+import { findSandwich } from '../src/findSandwich';
 import { addresses } from '../src/addresses';
 
-
 const argv = yargs
-    .command('search <address>', 'search sandwiches for a wallet address', {})
+    .command('search <address>', 'search for sandwiches', {})
     .option('web3_url', {
         description: 'the web3 URL to use (or set WEB3_PROVIDER_URI env var)',
         type: 'string',
@@ -37,19 +36,35 @@ const argv = yargs
         throw new Error('bad value for "to"');
     })
     .strict()
+    .version(false)
     .help()
       .alias('help', 'h')
       .demandCommand()
     .argv;
 
 
+const log = winston.createLogger({
+  level: 'info',
+  levels: winston.config.npm.levels,
+  format: winston.format.combine(
+    winston.format.timestamp({
+      format: 'YYYY-MM-DD HH:mm:ss'
+    }),
+    winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    winston.format.json()
+  ),
+    transports: [new winston.transports.Console()]
+});
+
 (async function () {
     const web3 = new Web3(argv.web3_url ? argv.web3_url : process.env.WEB3_PROVIDER_URI);
-    const from = 0;
-    const to = await web3.eth.getBlockNumber();
+    const from = argv.from;
+    const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;
     const wallet = argv.address as string;
     const userSwaps = await getSwaps(
         web3,
+        log,
         null, // all pools
         addresses.uniswapV2Router,
         wallet,
@@ -58,6 +73,6 @@ const argv = yargs
     );
     console.log(`Got ${userSwaps.length} swaps for ${wallet}`);
     for (const userSwap of userSwaps) {
-        await findSandwich(web3, userSwap, argv.window);
+        await findSandwich(web3, log, userSwap, argv.window);
     }
 })();

@@ -1,4 +1,6 @@
 import Web3 from 'web3';
+import winston from 'winston';
+
 import { getSwaps, SwapLog } from './getSwaps';
 
 // temp for CLI... eventually this should just return sandwiches as it
@@ -18,12 +20,14 @@ function logSandwich(open: SwapLog, target: SwapLog, close: SwapLog) {
 
 export async function findSandwich(
     web3: Web3,
+    log: winston.Logger,
     userSwap: SwapLog,
     window = 10,
 ) : Promise<void> {
     const pool = userSwap.address;
     const breadCandidates = await getSwaps(
         web3,
+        log,
         pool,
         null,
         null,
