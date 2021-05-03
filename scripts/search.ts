@@ -54,7 +54,12 @@ const log = winston.createLogger({
     winston.format.splat(),
     winston.format.json()
   ),
-    transports: [new winston.transports.Console()]
+    transports: [    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.cli(),
+        winston.format.splat()
+      )
+    })]
 });
 
 (async function () {
@@ -71,7 +76,7 @@ const log = winston.createLogger({
         from,
         to,
     );
-    console.log(`Got ${userSwaps.length} swaps for ${wallet}`);
+    log.info(`Found ${userSwaps.length} Uniswap swaps for ${wallet}... now searching for sandwiches on these swaps.`);
     for (const userSwap of userSwaps) {
         await findSandwich(web3, log, userSwap, argv.window);
     }

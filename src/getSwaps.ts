@@ -7,7 +7,7 @@ import { getLogs } from './getLogs';
 import * as ABIs from './abis';
 import { BigNumber } from 'ethers';
 
-enum SwapDir {
+export enum SwapDir {
     ZeroToOne,
     OneToZero,
 }
@@ -42,7 +42,7 @@ export async function getSwaps(
         wallet ? web3.eth.abi.encodeParameter('address', wallet) : null,
     ];
 
-    const all = await getLogs(web3, log,fromBlock, toBlock, pool, topics);
+    const all = await getLogs(web3, log, fromBlock, toBlock, pool, topics);
 
     const mapped = all.map((r) => {
         // raw:
@@ -112,8 +112,8 @@ export async function getSwaps(
             BigNumber.from,
         );
         const dir = bignums.amount0In.isZero()
-            ? SwapDir.ZeroToOne
-            : SwapDir.OneToZero;
+            ? SwapDir.OneToZero
+            : SwapDir.ZeroToOne;
 
         return {
             ...r,

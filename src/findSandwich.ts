@@ -1,62 +1,125 @@
 import Web3 from 'web3';
 import winston from 'winston';
+import { utils, BigNumber } from 'ethers';
 
-import { getSwaps, SwapLog } from './getSwaps';
+import { getSwaps, SwapLog, SwapDir } from './getSwaps';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,
 // e.g. return to client.
-function logWeird(msg: string, txs: Array<string>) {
-    console.log(msg, ...txs);
+function logWeird(log: winston.Logger, msg: string, txs: Array<string>) {
+    log.warn(`Weird: ${msg} ${txs}`);
 }
 
-function logSandwich(open: SwapLog, target: SwapLog, close: SwapLog) {
-    console.log(
-        open.transactionHash,
-        target.transactionHash,
-        close.transactionHash,
+function logSandwich(
+    log: winston.Logger,
+    open: SwapLog,
+    target: SwapLog,
+    close: SwapLog,
+    profit: BigNumber,
+) {
+    log.info(
+        `Sandwich! open ${open.transactionHash}, target ${
+            target.transactionHash
+        }, close ${close.transactionHash}, profit ${utils.formatEther(profit)}`,
     );
 }
 
 export async function findSandwich(
     web3: Web3,
     log: winston.Logger,
-    userSwap: SwapLog,
+    target: SwapLog,
     window = 10,
-) : Promise<void> {
-    const pool = userSwap.address;
+): Promise<void> {
+    const pool = target.address;
     const breadCandidates = await getSwaps(
         web3,
         log,
         pool,
         null,
         null,
-        userSwap.blockNumber,
-        userSwap.blockNumber + window,
+        target.blockNumber,
+        target.blockNumber + window,
     );
-    const openCandidates = breadCandidates.filter((log) => {
+    const openCandidates = breadCandidates.filter((cand) => {
         return (
-            log.swap.dir == userSwap.swap.dir &&
-            log.blockNumber == userSwap.blockNumber
+            cand.swap.dir == target.swap.dir &&
+            cand.blockNumber == target.blockNumber
         );
     });
-    for (const openCandidate of openCandidates) {
-        const close = breadCandidates.filter((log) => {
-            // xxx check that amount is same as in open?
+    for (const open of openCandidates) {
+        const closes = breadCandidates.filter((cand) => {
             return (
-                log.swap.dir != openCandidate.swap.dir &&
-                log.swap.to == openCandidate.swap.to
+                cand.swap.dir != open.swap.dir && cand.swap.to == open.swap.to
             );
         });
-        if (close.length == 0) {
+        if (closes.length == 0) {
             continue;
         }
-        if (close.length > 1) {
-            logWeird('multiple closes for same open', [
-                openCandidate.transactionHash,
-                ...close.map((log) => log.transactionHash),
-            ]);
+        if (checkWeirdMultipleClose(log, open, target, closes)) {
+            continue;
         }
-        logSandwich(openCandidate, userSwap, close[0]);
+        const close = closes[0];
+        if (checkWeirdMismatched(log, open, target, close)) {
+            continue;
+        }
+        const profit = computeProfit(open, close);
+        logSandwich(log, open, target, close, profit);
     }
+}
+
+function computeProfit(open: SwapLog, target: SwapLog): BigNumber {
+    switch (open.swap.dir) {
+        case SwapDir.ZeroToOne:
+            return target.swap.amount0Out.sub(open.swap.amount0In);
+        case SwapDir.OneToZero:
+            return target.swap.amount1Out.sub(open.swap.amount1In);
+    }
+}
+
+function checkWeirdMultipleClose(
+    log: winston.Logger,
+    open: SwapLog,
+    target: SwapLog,
+    closes: SwapLog[],
+): boolean {
+    if (closes.length > 1) {
+        logWeird(log, 'multiple closes for same open', [
+            open.transactionHash,
+            target.transactionHash,
+            ...closes.map((close) => close.transactionHash),
+        ]);
+        return true;
+    }
+    return false;
+}
+
+function checkWeirdMismatched(
+    log: winston.Logger,
+    open: SwapLog,
+    target: SwapLog,
+    close: SwapLog,
+): boolean {
+    switch (open.swap.dir) {
+        case SwapDir.ZeroToOne:
+            if (!open.swap.amount1Out.eq(close.swap.amount1In)) {
+                logWeird(log, 'sandwich open/close on different amounts', [
+                    open.transactionHash,
+                    target.transactionHash,
+                    close.transactionHash,
+                ]);
+                return true;
+            }
+            break;
+        case SwapDir.OneToZero:
+            if (!open.swap.amount0Out.eq(close.swap.amount0In)) {
+                logWeird(log, 'sandwich open/close on different amounts', [
+                    open.transactionHash,
+                    target.transactionHash,
+                    close.transactionHash,
+                ]);
+                return true;
+            }
+    }
+    return false;
 }
