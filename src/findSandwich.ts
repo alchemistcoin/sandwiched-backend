@@ -100,26 +100,20 @@ function checkWeirdMismatched(
     target: SwapLog,
     close: SwapLog,
 ): boolean {
-    switch (open.swap.dir) {
-        case SwapDir.ZeroToOne:
-            if (!open.swap.amount1Out.eq(close.swap.amount1In)) {
-                logWeird(log, 'sandwich open/close on different amounts', [
-                    open.transactionHash,
-                    target.transactionHash,
-                    close.transactionHash,
-                ]);
-                return true;
-            }
-            break;
-        case SwapDir.OneToZero:
-            if (!open.swap.amount0Out.eq(close.swap.amount0In)) {
-                logWeird(log, 'sandwich open/close on different amounts', [
-                    open.transactionHash,
-                    target.transactionHash,
-                    close.transactionHash,
-                ]);
-                return true;
-            }
+    let diff: BigNumber;
+    if (open.swap.dir == SwapDir.ZeroToOne) {
+        diff = open.swap.amount1Out.sub(close.swap.amount1In);
+    } else {
+        diff = open.swap.amount0Out.sub(close.swap.amount0In);
+    }
+    if (!diff.isZero()) {
+        logWeird(log, 'sandwich open/close on different amounts', [
+            open.transactionHash,
+            target.transactionHash,
+            close.transactionHash,
+            utils.formatEther(diff.abs()),
+        ]);
+        return true;
     }
     return false;
 }
