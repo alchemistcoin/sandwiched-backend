@@ -8,7 +8,7 @@ import { getSwaps, SwapLog, SwapDir } from './getSwaps';
 // finds them (EventEmitter?) and let the caller do what they want,
 // e.g. return to client.
 function logWeird(log: winston.Logger, msg: string, txs: Array<string>) {
-    log.warn(`Weird: ${msg} ${txs}`);
+    log.warn({ message: `Weird: ${msg}`, txs: txs });
 }
 
 function logSandwich(
@@ -18,11 +18,14 @@ function logSandwich(
     close: SwapLog,
     profit: BigNumber,
 ) {
-    log.info(
-        `Sandwich! open ${open.transactionHash}, target ${
-            target.transactionHash
-        }, close ${close.transactionHash}, profit ${utils.formatEther(profit)}`,
-    );
+    log.info({
+        message: 'Sandwich found',
+        openTx: open.transactionHash,
+        targetTx: target.transactionHash,
+        closeTx: close.transactionHash,
+        // this assumes that both have decimals=18. Need to look up decimals and normalize if not.
+        profit: utils.formatEther(profit),
+    });
 }
 
 export async function findSandwich(
@@ -68,12 +71,12 @@ export async function findSandwich(
     }
 }
 
-function computeProfit(open: SwapLog, target: SwapLog): BigNumber {
+function computeProfit(open: SwapLog, close: SwapLog): BigNumber {
     switch (open.swap.dir) {
         case SwapDir.ZeroToOne:
-            return target.swap.amount0Out.sub(open.swap.amount0In);
+            return close.swap.amount0Out.sub(open.swap.amount0In);
         case SwapDir.OneToZero:
-            return target.swap.amount1Out.sub(open.swap.amount1In);
+            return close.swap.amount1Out.sub(open.swap.amount1In);
     }
 }
 
@@ -100,18 +103,21 @@ function checkWeirdMismatched(
     target: SwapLog,
     close: SwapLog,
 ): boolean {
-    let diff: BigNumber;
+    let a: BigNumber, b: BigNumber;
     if (open.swap.dir == SwapDir.ZeroToOne) {
-        diff = open.swap.amount1Out.sub(close.swap.amount1In);
+        // xxx normalize decimals before doing this calc
+        a = open.swap.amount1Out;
+        b = close.swap.amount1In;
     } else {
-        diff = open.swap.amount0Out.sub(close.swap.amount0In);
+        a = open.swap.amount0Out;
+        b = close.swap.amount0In;
     }
-    if (!diff.isZero()) {
-        logWeird(log, 'sandwich open/close on different amounts', [
+    if (b.lt(a.mul(99).div(101)) || b.gt(a.mul(101).div(99))) {
+        logWeird(log, 'gap (>5%) in sandwich open/close amounts', [
             open.transactionHash,
             target.transactionHash,
             close.transactionHash,
-            utils.formatEther(diff.abs()),
+            utils.formatEther(b.sub(a)), // xxx decimals
         ]);
         return true;
     }
