@@ -15,18 +15,18 @@ const argv = yargs
     .option('window', {
         description: 'search window size (in blocks)',
         type: 'number',
-        default: 10
+        default: 10,
     })
     .option('from', {
         description: 'search from (block number)',
         type: 'number',
-        default: 0
+        default: 0,
     })
     .option('to', {
         description: 'search to (block number)',
-        default: 'latest'
+        default: 'latest',
     })
-    .coerce('to', to => {
+    .coerce('to', (to) => {
         if (typeof to == 'number') {
             return to;
         }
@@ -38,32 +38,34 @@ const argv = yargs
     .strict()
     .version(false)
     .help()
-      .alias('help', 'h')
-      .demandCommand()
-    .argv;
-
+    .alias('help', 'h')
+    .demandCommand().argv;
 
 const log = winston.createLogger({
-  level: 'info',
-  levels: winston.config.npm.levels,
-  format: winston.format.combine(
-    winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss'
-    }),
-    winston.format.errors({ stack: true }),
-    winston.format.splat(),
-    winston.format.json()
-  ),
-    transports: [    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.cli(),
-        winston.format.splat()
-      )
-    })]
+    level: 'info',
+    levels: winston.config.npm.levels,
+    format: winston.format.combine(
+        winston.format.timestamp({
+            format: 'YYYY-MM-DD HH:mm:ss',
+        }),
+        winston.format.errors({ stack: true }),
+        winston.format.splat(),
+        winston.format.json(),
+    ),
+    transports: [
+        new winston.transports.Console({
+            format: winston.format.combine(
+                winston.format.cli(),
+                winston.format.splat(),
+            ),
+        }),
+    ],
 });
 
 (async function () {
-    const web3 = new Web3(argv.web3_url ? argv.web3_url : process.env.WEB3_PROVIDER_URI);
+    const web3 = new Web3(
+        argv.web3_url ? argv.web3_url : process.env.WEB3_PROVIDER_URI,
+    );
     const from = argv.from;
     const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;
     const wallet = argv.address as string;
@@ -76,7 +78,9 @@ const log = winston.createLogger({
         from,
         to,
     );
-    log.info(`Found ${userSwaps.length} Uniswap swaps for ${wallet}... now searching for sandwiches on these swaps.`);
+    log.info(
+        `Found ${userSwaps.length} Uniswap swaps for ${wallet}... now searching for sandwiches on these swaps.`,
+    );
     for (const userSwap of userSwaps) {
         await findSandwich(web3, log, userSwap, argv.window);
     }
