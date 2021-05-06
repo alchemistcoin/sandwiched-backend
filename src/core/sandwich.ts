@@ -2,7 +2,7 @@ import Web3 from 'web3';
 import winston from 'winston';
 import { utils, BigNumber } from 'ethers';
 
-import { getSwaps, SwapLog, SwapDir } from './getSwaps';
+import { getSwaps, SwapLog, SwapDir } from './swaps';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,

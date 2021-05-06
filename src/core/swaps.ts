@@ -3,7 +3,7 @@ import { Log } from 'web3-core';
 import _ from 'lodash';
 import winston from 'winston';
 
-import { getLogs } from './getLogs';
+import { getLogs } from './logs';
 import * as ABIs from './abis';
 import { BigNumber } from 'ethers';
 

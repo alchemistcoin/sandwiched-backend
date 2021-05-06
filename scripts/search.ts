@@ -3,9 +3,9 @@ import winston from 'winston';
 import yargs from 'yargs';
 // import { Readable } from 'stream';
 
-import { getSwaps } from '../src/getSwaps';
-import { findSandwich } from '../src/findSandwich';
-import { addresses } from '../src/addresses';
+import { getSwaps } from '../src/core/swaps';
+import { findSandwich } from '../src/core/sandwich';
+import { addresses } from '../src/core/addresses';
 
 const argv = yargs
     .command('search <address>', 'search for sandwiches', {})
@@ -63,7 +63,7 @@ const log = winston.createLogger({
     const from = argv.from;
     const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;
     const wallet = argv.address as string;
-    const userSwaps = await getSwaps(
+    const swaps = await getSwaps(
         web3,
         log,
         null, // all pools
@@ -74,11 +74,11 @@ const log = winston.createLogger({
     );
     log.info({
         message: 'Found  Uniswap swaps',
-        n: userSwaps.length,
+        n: swaps.length,
         wallet: wallet,
     });
     log.info({ message: 'Now searching for sandwiches' });
-    for (const userSwap of userSwaps) {
+    for (const userSwap of swaps) {
         const results = await findSandwich(web3, log, userSwap, argv.window);
         results.forEach(log.info);
     }

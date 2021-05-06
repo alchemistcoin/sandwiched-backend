@@ -36,7 +36,7 @@ export async function getLogs(
                 toBlock,
             });
         } catch (error) {
-            console.log('failed!');
+            log.error(error);
             if (!error.message.includes('Log response size exceeded')) {
                 console.log(`unexpeted error ${error}`);
                 throw error;
