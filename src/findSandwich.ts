@@ -11,21 +11,12 @@ function logWeird(log: winston.Logger, msg: string, txs: Array<string>) {
     log.warn({ message: `Weird: ${msg}`, txs: txs });
 }
 
-function logSandwich(
-    log: winston.Logger,
-    open: SwapLog,
-    target: SwapLog,
-    close: SwapLog,
-    profit: BigNumber,
-) {
-    log.info({
-        message: 'Sandwich found',
-        openTx: open.transactionHash,
-        targetTx: target.transactionHash,
-        closeTx: close.transactionHash,
-        // this assumes that both have decimals=18. Need to look up decimals and normalize if not.
-        profit: utils.formatEther(profit),
-    });
+export interface Sandwich {
+    message: string;
+    openTx: string;
+    targetTx: string;
+    closeTx: string;
+    profit: string;
 }
 
 export async function findSandwich(
@@ -33,9 +24,9 @@ export async function findSandwich(
     log: winston.Logger,
     target: SwapLog,
     window = 10,
-): Promise<void> {
+): Promise<Sandwich[]> {
     const pool = target.address;
-    const breadCandidates = await getSwaps(
+    return getSwaps(
         web3,
         log,
         pool,
@@ -43,32 +34,46 @@ export async function findSandwich(
         null,
         target.blockNumber,
         target.blockNumber + window,
-    );
-    const openCandidates = breadCandidates.filter((cand) => {
-        return (
-            cand.swap.dir == target.swap.dir &&
-            cand.blockNumber == target.blockNumber
-        );
-    });
-    for (const open of openCandidates) {
-        const closes = breadCandidates.filter((cand) => {
+    ).then((swaps): Sandwich[] => {
+        const res: Sandwich[] = [];
+        const openCandidates = swaps.filter((cand) => {
             return (
-                cand.swap.dir != open.swap.dir && cand.swap.to == open.swap.to
+                cand.swap.dir == target.swap.dir &&
+                cand.blockNumber == target.blockNumber
             );
         });
-        if (closes.length == 0) {
-            continue;
+        for (const open of openCandidates) {
+            const closes = swaps.filter((cand) => {
+                return (
+                    cand.swap.dir != open.swap.dir &&
+                    cand.swap.to == open.swap.to
+                );
+            });
+            if (closes.length == 0) {
+                // not a sandwich open
+                continue;
+            }
+            if (closes.length > 1) {
+                logMultipleClose(log, open, target, closes);
+                continue;
+            }
+
+            const close = closes[0];
+            if (checkMismatched(log, open, target, close)) {
+                continue;
+            }
+            const profit = computeProfit(open, close);
+            res.push({
+                message: 'Sandwich found',
+                openTx: open.transactionHash,
+                targetTx: target.transactionHash,
+                closeTx: close.transactionHash,
+                // this assumes that both have decimals=18. Need to look up decimals and normalize if not.
+                profit: utils.formatEther(profit),
+            });
         }
-        if (checkWeirdMultipleClose(log, open, target, closes)) {
-            continue;
-        }
-        const close = closes[0];
-        if (checkWeirdMismatched(log, open, target, close)) {
-            continue;
-        }
-        const profit = computeProfit(open, close);
-        logSandwich(log, open, target, close, profit);
-    }
+        return res;
+    });
 }
 
 function computeProfit(open: SwapLog, close: SwapLog): BigNumber {
@@ -80,24 +85,20 @@ function computeProfit(open: SwapLog, close: SwapLog): BigNumber {
     }
 }
 
-function checkWeirdMultipleClose(
+function logMultipleClose(
     log: winston.Logger,
     open: SwapLog,
     target: SwapLog,
     closes: SwapLog[],
-): boolean {
-    if (closes.length > 1) {
-        logWeird(log, 'multiple closes for same open', [
-            open.transactionHash,
-            target.transactionHash,
-            ...closes.map((close) => close.transactionHash),
-        ]);
-        return true;
-    }
-    return false;
+): void {
+    logWeird(log, 'multiple closes for same open', [
+        open.transactionHash,
+        target.transactionHash,
+        ...closes.map((close) => close.transactionHash),
+    ]);
 }
 
-function checkWeirdMismatched(
+function checkMismatched(
     log: winston.Logger,
     open: SwapLog,
     target: SwapLog,

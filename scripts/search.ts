@@ -1,6 +1,7 @@
 import Web3 from 'web3';
 import winston from 'winston';
 import yargs from 'yargs';
+// import { Readable } from 'stream';
 
 import { getSwaps } from '../src/getSwaps';
 import { findSandwich } from '../src/findSandwich';
@@ -52,9 +53,7 @@ const log = winston.createLogger({
         winston.format.splat(),
         winston.format.json(),
     ),
-    transports: [
-        new winston.transports.Console(),
-    ],
+    transports: [new winston.transports.Console()],
 });
 
 (async function () {
@@ -73,9 +72,14 @@ const log = winston.createLogger({
         from,
         to,
     );
-    log.info({message: "Found  Uniswap swaps", n: userSwaps.length, wallet: wallet});
-    log.info({message: "Now searching for sandwiches"});
+    log.info({
+        message: 'Found  Uniswap swaps',
+        n: userSwaps.length,
+        wallet: wallet,
+    });
+    log.info({ message: 'Now searching for sandwiches' });
     for (const userSwap of userSwaps) {
-        await findSandwich(web3, log, userSwap, argv.window);
+        const results = await findSandwich(web3, log, userSwap, argv.window);
+        results.forEach(log.info);
     }
 })();
