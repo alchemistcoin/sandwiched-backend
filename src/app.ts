@@ -66,7 +66,7 @@ app.get(
         res.write(jsonLine({ message: 'fetching transactions' }));
         const to = await web3.eth.getBlockNumber(); // xxx move this out... shouldn't make one request per block
         const wallet = req.params.wallet;
-        let swaps = await getSwaps(
+        const swaps = await getSwaps(
             web3,
             logger,
             null, // all pools
