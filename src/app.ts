@@ -63,7 +63,7 @@ app.get(
         const window = 10;
         const from = 0;
         res.set('Content-Type', 'application/x-ndjson');
-        res.write(jsonLine({ message: 'fetching transactions' }));
+        res.write(jsonLine({ message: 'Fetching transactions...' }));
         const to = await web3.eth.getBlockNumber(); // xxx move this out... shouldn't make one request per block
         const wallet = req.params.wallet;
         const swaps = await getSwaps(
@@ -75,12 +75,38 @@ app.get(
             from,
             to,
         );
+        if (swaps.length == 0) {
+            res.write(
+                jsonLine({
+                    message: `No uniswapV2 swaps found. (are you sure this address has uniswapV2 trades?)`,
+                }),
+            );
+            res.end();
+            return;
+        }
         res.write(
-            jsonLine({ message: 'found uniswapV2 swaps', count: swaps.length }),
+            jsonLine({
+                message: `Found ${swaps.length} uniswapV2 swaps. Now searching for sandwiches around these swaps.`,
+                count: swaps.length,
+            }),
         );
+        let count = 0;
         for (const swap of swaps) {
             const sws = await findSandwich(web3, logger, swap, window);
+            count += sws.length;
             sws.forEach((sw) => res.write(jsonLine(sw)));
+        }
+        if (count > 0) {
+            res.write(
+                jsonLine({
+                    message: `Found ${count} uniswapV2 sandwiches. Yum!`,
+                    count: count,
+                }),
+            );
+        } else {
+            res.write(
+                jsonLine({ message: `Did not find any uniswapV2 sandwiches.` }),
+            );
         }
         res.end();
     }),
