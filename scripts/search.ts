@@ -79,7 +79,7 @@ const log = winston.createLogger({
     });
     log.info({ message: 'Now searching for sandwiches' });
     for (const userSwap of swaps) {
-        const results = await findSandwich(web3, log, userSwap, argv.window);
-        results.forEach(log.info);
+        const sws = await findSandwich(web3, log, userSwap, argv.window);
+        sws.forEach((sw) => log.info(sw));
     }
 })();

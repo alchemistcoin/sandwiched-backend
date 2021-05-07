@@ -75,7 +75,9 @@ app.get(
             from,
             to,
         );
-        res.write(jsonLine({ message: 'found swaps', count: swaps.length }));
+        res.write(
+            jsonLine({ message: 'found uniswapV2 swaps', count: swaps.length }),
+        );
         for (const swap of swaps) {
             const sws = await findSandwich(web3, logger, swap, window);
             sws.forEach((sw) => res.write(jsonLine(sw)));
