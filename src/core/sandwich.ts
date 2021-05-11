@@ -17,6 +17,8 @@ export interface Sandwich {
     targetTx: string;
     closeTx: string;
     profit: string;
+    profitCurrency: string;
+    pool: string;
 }
 
 export async function findSandwich(
@@ -62,7 +64,7 @@ export async function findSandwich(
             if (checkMismatched(log, open, target, close)) {
                 continue;
             }
-            const profit = computeProfit(open, close);
+            const [profit, currency] = computeProfit(open, close);
             res.push({
                 message: 'Sandwich found',
                 openTx: open.transactionHash,
@@ -70,19 +72,27 @@ export async function findSandwich(
                 closeTx: close.transactionHash,
                 // this assumes that both have decimals=18. Need to look up decimals and normalize if not.
                 profit: utils.formatEther(profit),
+                profitCurrency: currency,
+                pool: `${target.swap.pool.token0.symbol} - ${target.swap.pool.token1.symbol}`,
             });
         }
         return res;
     });
 }
 
-function computeProfit(open: SwapLog, close: SwapLog): BigNumber {
+function computeProfit(open: SwapLog, close: SwapLog): [BigNumber, string] {
+    let cur: string;
+    let profit: BigNumber;
     switch (open.swap.dir) {
         case SwapDir.ZeroToOne:
-            return close.swap.amount0Out.sub(open.swap.amount0In);
+            profit = close.swap.amount0Out.sub(open.swap.amount0In);
+            cur = open.swap.pool.token0.symbol;
+            break;
         case SwapDir.OneToZero:
-            return close.swap.amount1Out.sub(open.swap.amount1In);
+            profit = close.swap.amount1Out.sub(open.swap.amount1In);
+            cur = open.swap.pool.token1.symbol;
     }
+    return [profit, cur];
 }
 
 function logMultipleClose(

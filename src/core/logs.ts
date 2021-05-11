@@ -27,9 +27,8 @@ export async function getLogs(
     }
     if (blocknumber.less(fromBlock, toBlock)) {
         try {
-            log.debug(`getLogs: ${address} ${fromBlock} ${toBlock}`);
+            log.silly(`getLogs: ${address} ${fromBlock} ${toBlock}`);
             return await web3.eth.getPastLogs({
-                //            return await provider.getLogs({
                 address,
                 topics: topics,
                 fromBlock,
