@@ -2,10 +2,11 @@ import Web3 from 'web3';
 import { Log } from 'web3-core';
 import _ from 'lodash';
 import winston from 'winston';
+import { BigNumber } from 'ethers';
 
 import { getLogs } from './logs';
 import * as ABIs from './abis';
-import { BigNumber } from 'ethers';
+import { Pool } from './pools';
 
 export enum SwapDir {
     ZeroToOne,
@@ -20,6 +21,7 @@ interface SwapParams {
     amount1Out: BigNumber;
     to: string;
     event: string;
+    pool: Pool;
     dir: SwapDir;
 }
 
@@ -44,7 +46,7 @@ export async function getSwaps(
 
     const all = await getLogs(web3, log, fromBlock, toBlock, pool, topics);
 
-    const mapped = all.map((r) => {
+    const swaplogs: SwapLog[] = all.map((r) => {
         // raw:
         // {
         //   "address": "0x56feAccb7f750B997B36A68625C7C596F0B41A58",
@@ -121,13 +123,21 @@ export async function getSwaps(
                 ...bignums,
                 ..._.pick(decoded, ['sender', 'to', 'event']),
                 dir,
+                pool: null,
             },
         };
     });
-    const sorted = _.sortBy(mapped, 'blockNumber', 'transactionIndex');
-    if (!_.isEqual(sorted, mapped)) {
+    for (const log of swaplogs) {
+        log.swap.pool = await Pool.lookupOrCreate(log.address);
+        if (log.swap.pool === null) {
+            throw new Error('null pool');
+        }
+    }
+
+    const sorted = _.sortBy(swaplogs, 'blockNumber', 'transactionIndex');
+    if (!_.isEqual(sorted, swaplogs)) {
         // don't expect this to happen, but check for sanity.
         throw 'Not sorted!';
     }
-    return mapped;
+    return swaplogs;
 }

@@ -99,6 +99,11 @@ export class Pool {
         this.token0 = token0;
         this.token1 = token1;
     }
+    toString(): string {
+        return `Pool(${this.address.slice(0, 8)}, ${this.token0}-${
+            this.token1
+        })`;
+    }
 }
 
 export class Token {
@@ -185,5 +190,8 @@ export class Token {
         this.name = name;
         this.symbol = symbol;
         this.decimals = decimals;
+    }
+    toString(): string {
+        return `Token(${this.address.slice(0, 8)}, ${this.symbol})`;
     }
 }

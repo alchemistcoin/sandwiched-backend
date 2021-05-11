@@ -6,6 +6,7 @@ import yargs from 'yargs';
 import { getSwaps } from '../src/core/swaps';
 import { findSandwich } from '../src/core/sandwich';
 import { addresses } from '../src/core/addresses';
+import { init as initPool } from '../src/core/pools';
 
 const argv = yargs
     .command('search <address>', 'search for sandwiches', {})
@@ -60,6 +61,8 @@ const log = winston.createLogger({
     const web3 = new Web3(
         argv.web3_url ? argv.web3_url : process.env.WEB3_PROVIDER_URI,
     );
+    initPool(web3);
+
     const from = argv.from;
     const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;
     const wallet = argv.address as string;

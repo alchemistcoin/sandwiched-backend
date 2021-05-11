@@ -9,10 +9,12 @@ import { logger } from './config/logger';
 import { getSwaps } from './core/swaps';
 import { findSandwich } from './core/sandwich';
 import { addresses } from '../src/core/addresses';
+import { init as initPool } from '../src/core/pools';
 
 export const app: express.Application = express();
 
 const web3 = new Web3(config.web3_url);
+initPool(web3);
 
 if (config.env !== 'test') {
     app.use(morgan.successHandler);
