@@ -42,7 +42,8 @@ export async function findSandwich(
         const openCandidates = swaps.filter((cand) => {
             return (
                 cand.swap.dir == target.swap.dir &&
-                cand.blockNumber == target.blockNumber
+                cand.blockNumber == target.blockNumber &&
+                cand.transactionIndex < target.transactionIndex
             );
         });
         for (const open of openCandidates) {
