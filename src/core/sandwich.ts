@@ -3,6 +3,7 @@ import winston from 'winston';
 import { utils, BigNumber } from 'ethers';
 
 import { getSwaps, SwapLog, SwapDir } from './swaps';
+import { Token } from './pools';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,
@@ -64,15 +65,15 @@ export async function findSandwich(
             if (checkMismatched(log, open, target, close)) {
                 continue;
             }
-            const [profit, currency] = computeProfit(open, close);
+            const [profit, tok] = computeProfit(open, close);
             res.push({
                 message: 'Sandwich found',
                 openTx: open.transactionHash,
                 targetTx: target.transactionHash,
                 closeTx: close.transactionHash,
                 // this assumes that both have decimals=18. Need to look up decimals and normalize if not.
-                profit: utils.formatEther(profit),
-                profitCurrency: currency,
+                profit: utils.formatUnits(profit, tok.decimals),
+                profitCurrency: tok.symbol,
                 pool: `${target.swap.pool.token0.symbol} - ${target.swap.pool.token1.symbol}`,
             });
         }
@@ -80,19 +81,20 @@ export async function findSandwich(
     });
 }
 
-function computeProfit(open: SwapLog, close: SwapLog): [BigNumber, string] {
-    let cur: string;
+function computeProfit(open: SwapLog, close: SwapLog): [BigNumber, Token] {
     let profit: BigNumber;
+    let tok: Token;
+
     switch (open.swap.dir) {
         case SwapDir.ZeroToOne:
             profit = close.swap.amount0Out.sub(open.swap.amount0In);
-            cur = open.swap.pool.token0.symbol;
+            tok = open.swap.pool.token0;
             break;
         case SwapDir.OneToZero:
             profit = close.swap.amount1Out.sub(open.swap.amount1In);
-            cur = open.swap.pool.token1.symbol;
+            tok = open.swap.pool.token1;
     }
-    return [profit, cur];
+    return [profit, tok];
 }
 
 function logMultipleClose(
