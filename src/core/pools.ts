@@ -1,5 +1,6 @@
 import Web3 from 'web3';
 import * as utils from 'web3-utils';
+import _ from 'lodash';
 
 type Exchange = 'UniswapV2';
 
@@ -106,6 +107,57 @@ export class Pool {
     }
 }
 
+const detailedERC20ABI: utils.AbiItem[] = [
+    {
+        constant: true,
+        inputs: [],
+        name: 'name',
+        outputs: [
+            {
+                name: '',
+                type: 'string',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [],
+        name: 'decimals',
+        outputs: [
+            {
+                name: '',
+                type: 'uint8',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+    {
+        constant: true,
+        inputs: [],
+        name: 'symbol',
+        outputs: [
+            {
+                name: '',
+                type: 'string',
+            },
+        ],
+        payable: false,
+        stateMutability: 'view',
+        type: 'function',
+    },
+];
+// some ERC20 contracts (such as 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 or
+// 0xfFED56a180f23fD32Bc6A1d8d3c09c283aB594A8) have symbols and name of type
+// bytes32 instead of string.
+const detailedERC20bytes32ABI = _.cloneDeep(detailedERC20ABI);
+detailedERC20bytes32ABI[0].outputs[0].type = 'bytes32';
+detailedERC20bytes32ABI[2].outputs[0].type = 'bytes32';
+
 export class Token {
     static readonly cache: { [index: string]: Token } = {};
     static web3: Web3;
@@ -123,57 +175,29 @@ export class Token {
     }
 
     static async newToken(address: string): Promise<Token> {
-        const ABI: utils.AbiItem[] = [
-            {
-                constant: true,
-                inputs: [],
-                name: 'name',
-                outputs: [
-                    {
-                        name: '',
-                        type: 'string',
-                    },
-                ],
-                payable: false,
-                stateMutability: 'view',
-                type: 'function',
-            },
-            {
-                constant: true,
-                inputs: [],
-                name: 'decimals',
-                outputs: [
-                    {
-                        name: '',
-                        type: 'uint8',
-                    },
-                ],
-                payable: false,
-                stateMutability: 'view',
-                type: 'function',
-            },
-            {
-                constant: true,
-                inputs: [],
-                name: 'symbol',
-                outputs: [
-                    {
-                        name: '',
-                        type: 'string',
-                    },
-                ],
-                payable: false,
-                stateMutability: 'view',
-                type: 'function',
-            },
-        ];
-        const contract = new Token.web3.eth.Contract(ABI, address);
-        const [name, symbol, decimals] = await Promise.all([
-            contract.methods.name().call(),
-            contract.methods.symbol().call(),
-            contract.methods.decimals().call(),
-        ]);
-        return new Token(address, name, symbol, decimals);
+        const contract = new Token.web3.eth.Contract(detailedERC20ABI, address);
+        try {
+            const [name, symbol, decimals] = await Promise.all([
+                contract.methods.name().call(),
+                contract.methods.symbol().call(),
+                contract.methods.decimals().call(),
+            ]);
+            return new Token(address, name, symbol, decimals);
+        } catch (e) {
+            const contract = new Token.web3.eth.Contract(
+                detailedERC20bytes32ABI,
+                address,
+            );
+            // eslint-disable-next-line prefer-const
+            let [name, symbol, decimals] = await Promise.all([
+                contract.methods.name().call(),
+                contract.methods.symbol().call(),
+                contract.methods.decimals().call(),
+            ]);
+            name = utils.toUtf8(name);
+            symbol = utils.toUtf8(symbol);
+            return new Token(address, name, symbol, decimals);
+        }
     }
 
     readonly address: string;
