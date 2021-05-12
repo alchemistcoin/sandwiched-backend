@@ -8,6 +8,22 @@ import * as blocknumber from './blocknumber';
 // import {ethers} from 'ethers';
 // const provider = ethers.getDefaultProvider(undefined, {alchemy: process.env.WEB3_PROVIDER_URI, quorum: 1})
 
+function sizeExceeded(e: Error): boolean {
+    // sadly, the only way to infer that an error is due to response size
+    // exceeded is via this crufy provider-specific check.
+
+    // alchemy
+    if (e.message.includes('Log response size exceeded')) {
+        return true;
+    }
+
+    // infura
+    if (e.message.includes('query returned more than')) {
+        return true;
+    }
+    return false;
+}
+
 // recursive getLogs wrapper to handle calls that go over the event
 // limit (some APIs error out on getLogs calls that would return more
 // than 10k events).
@@ -35,10 +51,9 @@ export async function getLogs(
                 toBlock,
             });
         } catch (error) {
-            log.error(error);
-            if (!error.message.includes('Log response size exceeded')) {
-                console.log(`unexpeted error ${error}`);
-                throw error;
+            if (!sizeExceeded(error)) {
+                log.error(error);
+                return [];
             }
             const midBlock =
                 (blocknumber.toNumber(fromBlock) +
