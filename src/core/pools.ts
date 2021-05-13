@@ -182,28 +182,32 @@ export class Token {
     static async newToken(address: string): Promise<Token> {
         Pool.logger.debug(`newToken: ${address}`);
         const contract = new Token.web3.eth.Contract(detailedERC20ABI, address);
-        try {
-            const [name, symbol, decimals] = await Promise.all([
-                contract.methods.name().call(),
-                contract.methods.symbol().call(),
-                contract.methods.decimals().call(),
-            ]);
-            return new Token(address, name, symbol, decimals);
-        } catch (e) {
-            const contract = new Token.web3.eth.Contract(
-                detailedERC20bytes32ABI,
-                address,
-            );
-            // eslint-disable-next-line prefer-const
-            let [name, symbol, decimals] = await Promise.all([
-                contract.methods.name().call(),
-                contract.methods.symbol().call(),
-                contract.methods.decimals().call(),
-            ]);
-            name = utils.toUtf8(name);
-            symbol = utils.toUtf8(symbol);
-            return new Token(address, name, symbol, decimals);
-        }
+        let name: string, symbol: string, decimals: string;
+        [name, symbol, decimals] = await Promise.all([
+            contract.methods.name().call(),
+            contract.methods.symbol().call(),
+            contract.methods.decimals().call(),
+        ])
+            .catch(async () => {
+                const contract = new Token.web3.eth.Contract(
+                    detailedERC20bytes32ABI,
+                    address,
+                );
+                [name, symbol, decimals] = await Promise.all([
+                    contract.methods.name().call(),
+                    contract.methods.symbol().call(),
+                    contract.methods.decimals().call(),
+                ]);
+                name = utils.toUtf8(name);
+                symbol = utils.toUtf8(symbol);
+                return [name, symbol, decimals];
+            })
+            .catch(() => {
+                // for contracts without name/symbol (for example 0xEB9951021698B42e4399f9cBb6267Aa35F82D59D)
+                return ['unknown', 'unknown', '18'];
+            });
+
+        return new Token(address, name, symbol, decimals);
     }
 
     readonly address: string;
@@ -214,12 +218,16 @@ export class Token {
         address: string,
         name: string,
         symbol: string,
-        decimals: number,
+        decimals: string,
     ) {
+        const dec = parseInt(decimals);
+        if (isNaN(dec)) {
+            throw new Error(`token invalid decimals ${decimals}`);
+        }
         this.address = address;
         this.name = name;
         this.symbol = symbol;
-        this.decimals = decimals;
+        this.decimals = dec;
     }
     toString(): string {
         return `Token(${this.address.slice(0, 8)}, ${this.symbol})`;
