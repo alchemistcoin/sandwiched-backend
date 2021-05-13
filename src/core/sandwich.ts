@@ -74,7 +74,6 @@ export async function findSandwich(
                 openTx: open.transactionHash,
                 targetTx: target.transactionHash,
                 closeTx: close.transactionHash,
-                // this assumes that both have decimals=18. Need to look up decimals and normalize if not.
                 profit: utils.formatUnits(profit, tok.decimals),
                 profitCurrency: tok.symbol,
                 pool: `${target.swap.pool.token0.symbol} - ${target.swap.pool.token1.symbol}`,
@@ -121,7 +120,6 @@ function checkMismatched(
 ): boolean {
     let a: BigNumber, b: BigNumber;
     if (open.swap.dir == SwapDir.ZeroToOne) {
-        // xxx normalize decimals before doing this calc
         a = open.swap.amount1Out;
         b = close.swap.amount1In;
     } else {
