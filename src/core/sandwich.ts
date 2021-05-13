@@ -9,7 +9,7 @@ import { Token } from './pools';
 // finds them (EventEmitter?) and let the caller do what they want,
 // e.g. return to client.
 function logWeird(log: winston.Logger, msg: string, txs: Array<string>) {
-    log.warn({ message: `Weird: ${msg}`, txs: txs });
+    log.warn(`Weird: ${msg} (txs ${txs}`);
 }
 
 export interface Sandwich {
@@ -50,7 +50,9 @@ export async function findSandwich(
             const closes = swaps.filter((cand) => {
                 return (
                     cand.swap.dir != open.swap.dir &&
-                    cand.swap.to == open.swap.to
+                    cand.swap.to == open.swap.to &&
+                    (cand.blockNumber > target.blockNumber ||
+                        cand.transactionIndex > target.transactionIndex)
                 );
             });
             if (closes.length == 0) {
