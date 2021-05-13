@@ -3,7 +3,7 @@ import winston from 'winston';
 import { utils, BigNumber } from 'ethers';
 
 import { getSwaps, SwapLog, SwapDir } from './swaps';
-import { Token } from './pools';
+import { Pool, Token } from './pools';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,
@@ -28,73 +28,80 @@ export async function findSandwich(
     target: SwapLog,
     window = 10,
 ): Promise<Sandwich[]> {
-    const pool = target.address;
-    return getSwaps(
+    const swaps = await getSwaps(
         web3,
         log,
-        pool,
+        target.address,
         null,
         null,
         target.blockNumber,
         target.blockNumber + window,
-    ).then((swaps): Sandwich[] => {
-        const res: Sandwich[] = [];
-        const openCandidates = swaps.filter((cand) => {
+    );
+    const res: Sandwich[] = [];
+    const openCandidates = swaps.filter((cand) => {
+        return (
+            cand.swap.dir == target.swap.dir &&
+            cand.blockNumber == target.blockNumber &&
+            cand.transactionIndex < target.transactionIndex
+        );
+    });
+    for (const open of openCandidates) {
+        const closes = swaps.filter((cand) => {
             return (
-                cand.swap.dir == target.swap.dir &&
-                cand.blockNumber == target.blockNumber &&
-                cand.transactionIndex < target.transactionIndex
+                cand.swap.dir != open.swap.dir &&
+                cand.swap.to == open.swap.to &&
+                (cand.blockNumber > target.blockNumber ||
+                    cand.transactionIndex > target.transactionIndex)
             );
         });
-        for (const open of openCandidates) {
-            const closes = swaps.filter((cand) => {
-                return (
-                    cand.swap.dir != open.swap.dir &&
-                    cand.swap.to == open.swap.to &&
-                    (cand.blockNumber > target.blockNumber ||
-                        cand.transactionIndex > target.transactionIndex)
-                );
-            });
-            if (closes.length == 0) {
-                // not a sandwich open
-                continue;
-            }
-            if (closes.length > 1) {
-                logMultipleClose(log, open, target, closes);
-                continue;
-            }
-
-            const close = closes[0];
-            if (checkMismatched(log, open, target, close)) {
-                continue;
-            }
-            const [profit, tok] = computeProfit(open, close);
-            res.push({
-                message: 'Sandwich found',
-                openTx: open.transactionHash,
-                targetTx: target.transactionHash,
-                closeTx: close.transactionHash,
-                profit: utils.formatUnits(profit, tok.decimals),
-                profitCurrency: tok.symbol,
-                pool: `${target.swap.pool.token0.symbol} - ${target.swap.pool.token1.symbol}`,
-            });
+        if (closes.length == 0) {
+            // not a sandwich open
+            continue;
         }
-        return res;
-    });
+        if (closes.length > 1) {
+            logMultipleClose(log, open, target, closes);
+            continue;
+        }
+
+        const close = closes[0];
+        if (checkMismatched(log, open, target, close)) {
+            continue;
+        }
+
+        const pool = await Pool.lookupOrCreate(open.address);
+        if (pool === null) {
+            throw new Error('null pool');
+        }
+        const [profit, tok] = computeProfit(open, close, pool);
+        res.push({
+            message: 'Sandwich found',
+            openTx: open.transactionHash,
+            targetTx: target.transactionHash,
+            closeTx: close.transactionHash,
+            profit: utils.formatUnits(profit, tok.decimals),
+            profitCurrency: tok.symbol,
+            pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
+        });
+    }
+    return res;
 }
 
-function computeProfit(open: SwapLog, close: SwapLog): [BigNumber, Token] {
+function computeProfit(
+    open: SwapLog,
+    close: SwapLog,
+    pool: Pool,
+): [BigNumber, Token] {
     let profit: BigNumber;
     let tok: Token;
 
     switch (open.swap.dir) {
         case SwapDir.ZeroToOne:
             profit = close.swap.amount0Out.sub(open.swap.amount0In);
-            tok = open.swap.pool.token0;
+            tok = pool.token0;
             break;
         case SwapDir.OneToZero:
             profit = close.swap.amount1Out.sub(open.swap.amount1In);
-            tok = open.swap.pool.token1;
+            tok = pool.token1;
     }
     return [profit, tok];
 }

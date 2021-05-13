@@ -6,7 +6,6 @@ import { BigNumber } from 'ethers';
 
 import { getLogs } from './logs';
 import * as ABIs from './abis';
-import { Pool } from './pools';
 
 export enum SwapDir {
     ZeroToOne,
@@ -21,7 +20,6 @@ interface SwapParams {
     amount1Out: BigNumber;
     to: string;
     event: string;
-    pool: Pool;
     dir: SwapDir;
 }
 
@@ -123,17 +121,9 @@ export async function getSwaps(
                 ...bignums,
                 ..._.pick(decoded, ['sender', 'to', 'event']),
                 dir,
-                pool: null,
             },
         };
     });
-    for (const log of swaplogs) {
-        log.swap.pool = await Pool.lookupOrCreate(log.address);
-        if (log.swap.pool === null) {
-            throw new Error('null pool');
-        }
-    }
-
     const sorted = _.sortBy(swaplogs, 'blockNumber', 'transactionIndex');
     if (!_.isEqual(sorted, swaplogs)) {
         // don't expect this to happen, but check for sanity.
