@@ -14,7 +14,7 @@ import { init as initPool } from '../src/core/pools';
 export const app: express.Application = express();
 
 const web3 = new Web3(config.web3_url);
-initPool(web3);
+initPool(web3, logger);
 
 if (config.env !== 'test') {
     app.use(morgan.successHandler);
