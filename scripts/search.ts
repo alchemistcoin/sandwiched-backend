@@ -3,6 +3,7 @@ import winston from 'winston';
 import yargs from 'yargs';
 // import { Readable } from 'stream';
 
+import { config } from '../src/config/config';
 import { getSwaps } from '../src/core/swaps';
 import { findSandwich } from '../src/core/sandwich';
 import { addresses } from '../src/core/addresses';
@@ -44,7 +45,7 @@ const argv = yargs
     .demandCommand().argv;
 
 const log = winston.createLogger({
-    level: 'info',
+    level: config.env === 'development' ? 'debug' : 'info',
     levels: winston.config.npm.levels,
     format: winston.format.combine(
         winston.format.timestamp({
@@ -61,7 +62,7 @@ const log = winston.createLogger({
     const web3 = new Web3(
         argv.web3_url ? argv.web3_url : process.env.WEB3_PROVIDER_URI,
     );
-    initPool(web3);
+    initPool(web3, log);
 
     const from = argv.from;
     const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;

@@ -1,20 +1,23 @@
 import Web3 from 'web3';
 import * as utils from 'web3-utils';
+import winston from 'winston';
 import _ from 'lodash';
 
 type Exchange = 'UniswapV2';
 
-export function init(web3: Web3): void {
+export function init(web3: Web3, log: winston.Logger): void {
     // meh pattern
-    Pool.init(web3);
-    Token.init(web3);
+    Pool.init(web3, log);
+    Token.init(web3, log);
 }
 
 export class Pool {
     static readonly cache: { [index: string]: Pool } = {};
     static web3: Web3;
-    static init(web3: Web3): void {
+    static logger: winston.Logger;
+    static init(web3: Web3, logger: winston.Logger): void {
         Pool.web3 = web3;
+        Pool.logger = logger;
     }
 
     static async poolType(address: string): Promise<Exchange | undefined> {
@@ -45,11 +48,11 @@ export class Pool {
     }
 
     static async newPool(address: string): Promise<Pool> {
+        Pool.logger.debug(`newPool: ${address}`);
         if ((await Pool.poolType(address)) === undefined) {
             throw new Error(`unknown pool type for address ${address}`);
         }
         // only Uniswapv2 for now.
-
         const ABI: utils.AbiItem[] = [
             {
                 constant: true,
@@ -161,9 +164,11 @@ detailedERC20bytes32ABI[2].outputs[0].type = 'bytes32';
 export class Token {
     static readonly cache: { [index: string]: Token } = {};
     static web3: Web3;
+    static logger: winston.Logger;
     static ABI: utils.AbiItem[];
-    static init(web3: Web3): void {
+    static init(web3: Web3, logger: winston.Logger): void {
         Token.web3 = web3;
+        Token.logger = logger;
     }
 
     static async lookupOrCreate(address: string): Promise<Token> {
@@ -175,6 +180,7 @@ export class Token {
     }
 
     static async newToken(address: string): Promise<Token> {
+        Pool.logger.debug(`newToken: ${address}`);
         const contract = new Token.web3.eth.Contract(detailedERC20ABI, address);
         try {
             const [name, symbol, decimals] = await Promise.all([
