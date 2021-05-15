@@ -6,7 +6,7 @@ import Web3 from 'web3';
 
 import { config } from './config/config';
 import { logger } from './config/logger';
-import { getSwaps } from './core/swaps';
+import { getSwaps, SwapLog } from './core/swaps';
 import { findSandwich } from './core/sandwich';
 import { addresses } from '../src/core/addresses';
 import { init as initPool } from '../src/core/pools';
@@ -24,11 +24,12 @@ if (config.env !== 'test') {
 // https://expressjs.com/en/guide/behind-proxies.html
 app.enable('trust proxy');
 
+const reqsPerInterval = config.env === 'test' ? 100 : 6;
 app.use(
     rateLimit({
         windowMs: 1 * 60 * 1000, // 1 minute
         headers: false,
-        max: 6,
+        max: reqsPerInterval,
         onLimitReached: function (req: express.Request) {
             logger.warn(`Limit reached for ${req.ip}`);
         },
@@ -56,27 +57,58 @@ const catchAsync = (fn: express.Handler): express.Handler => (
 };
 
 function jsonLine(o: any): string {
-    return JSON.stringify(o, null, 2) + '\n';
+    return JSON.stringify(o) + '\n';
 }
 
 app.get(
     '/sandwiches/:wallet',
-    catchAsync(async function (req, res): Promise<void> {
+    catchAsync(async function (req, res, next): Promise<void> {
         const window = 10;
-        const from = 0;
+        const wallet = req.params.wallet;
+        if (!web3.utils.isAddress(wallet)) {
+            res.statusCode = 400;
+            return next(new Error('bad wallet'));
+        }
+        let fromBlock = 0;
+        let toBlock: number;
+        if (req.query.fromBlock !== undefined) {
+            const p = parseInt(req.query.fromBlock as string);
+            if (isNaN(p)) {
+                res.statusCode = 400;
+                return next(new Error('bad fromBlock'));
+            }
+            fromBlock = p;
+        }
+        if (req.query.toBlock !== undefined) {
+            const p = parseInt(req.query.toBlock as string);
+            if (isNaN(p)) {
+                res.statusCode = 400;
+                return next(new Error('bad toBlock'));
+            }
+            toBlock = p;
+        } else {
+            toBlock = await web3.eth.getBlockNumber(); // xxx move this out of this handler... shouldn't make one request per block
+        }
+
         res.set('Content-Type', 'application/x-ndjson');
         res.write(jsonLine({ message: 'Fetching transactions...' }));
-        const to = await web3.eth.getBlockNumber(); // xxx move this out... shouldn't make one request per block
-        const wallet = req.params.wallet;
-        const swaps = await getSwaps(
-            web3,
-            logger,
-            null, // all pools
-            addresses.uniswapV2Router,
-            wallet,
-            from,
-            to,
-        );
+        let swaps: SwapLog[];
+        try {
+            swaps = await getSwaps(
+                web3,
+                logger,
+                null, // all pools
+                addresses.uniswapV2Router,
+                wallet,
+                fromBlock,
+                toBlock,
+            );
+        } catch (e) {
+            res.write(
+                jsonLine({ message: 'Error processing request', err: e }),
+            );
+            return res.end();
+        }
         if (swaps.length == 0) {
             res.write(
                 jsonLine({

@@ -2,6 +2,7 @@
     "compilerOptions": {
         "target": "es2020",
         "module": "commonjs",
+        "esModuleInterop": true,
         "moduleResolution": "node",
         "allowSyntheticDefaultImports": true,
         "allowJs": true,
@@ -16,7 +17,10 @@
         "noUnusedParameters": true,
         "noImplicitAny": false,
         "noImplicitThis": false,
-        "strictNullChecks": false
+        "strictNullChecks": false,
+        "rootDir": ".",
+        "outDir": "dist",
+        "removeComments": true
     },
-    "include": ["src/**/*", "scripts/**/*", "__tests__/**/*"]
+    "include": ["src/**/*", "scripts/**/*", "test/**/*"]
 }
