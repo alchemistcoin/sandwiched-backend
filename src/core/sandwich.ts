@@ -20,7 +20,10 @@ export interface Sandwich {
     profit: string;
     profitCurrency: string;
     pool: string;
+    mev: boolean;
 }
+
+const bundle_limit = 5;
 
 export async function findSandwich(
     web3: Web3,
@@ -73,6 +76,13 @@ export async function findSandwich(
             throw new Error('null pool');
         }
         const [profit, tok] = computeProfit(open, close, pool);
+        let mev = false;
+        if (target.transactionIndex <= bundle_limit) {
+            const tx = await web3.eth.getTransaction(open.transactionHash);
+            if (parseInt(tx.gasPrice) == 0) {
+                mev = true;
+            }
+        }
         res.push({
             message: 'Sandwich found',
             openTx: open.transactionHash,
@@ -81,6 +91,7 @@ export async function findSandwich(
             profit: utils.formatUnits(profit, tok.decimals),
             profitCurrency: tok.symbol,
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
+            mev,
         });
     }
     return res;

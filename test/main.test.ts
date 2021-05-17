@@ -22,6 +22,7 @@ const picker = ({
     pool,
     profit,
     profitCurrency,
+    mev,
 }: message) => ({
     message,
     openTx,
@@ -30,6 +31,7 @@ const picker = ({
     pool,
     profit,
     profitCurrency,
+    mev,
 });
 
 describe('sandwiched-wtf API', () => {
@@ -72,6 +74,7 @@ describe('sandwiched-wtf API', () => {
                 profit: '1.770266036457971241',
                 profitCurrency: 'WETH',
                 pool: 'WETH - B20',
+                mev: false,
             });
         });
 
@@ -92,6 +95,7 @@ describe('sandwiched-wtf API', () => {
                 profit: '14.320954423950744728',
                 profitCurrency: 'WETH',
                 pool: 'FARM - WETH',
+                mev: false,
             });
         });
 
@@ -112,7 +116,17 @@ describe('sandwiched-wtf API', () => {
                 profit: '1.026020662373103583',
                 profitCurrency: 'ibETH',
                 pool: 'ibETH - ALPHA',
+                mev: false,
             });
+        });
+
+        test('sets mev flag on bundle sandwich', async () => {
+            const block = 12205788;
+            const res = await request(app).get(url(block)).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(1);
+            expect(picker(sws[0]).mev).toEqual(true);
         });
 
         test('computes correct profit when non-standard (non-18) decimals', async () => {
