@@ -6,10 +6,8 @@ import Web3 from 'web3';
 
 import { config } from './config/config';
 import { logger } from './config/logger';
-import { getSwaps, SwapLog } from './core/swaps';
-import { findSandwich } from './core/sandwich';
-import { addresses } from '../src/core/addresses';
-import { init as initPool } from '../src/core/pools';
+import { detect } from './core/detector';
+import { init as initPool } from './core/pools';
 
 export const app: express.Application = express();
 
@@ -56,6 +54,7 @@ const catchAsync = (fn: express.Handler): express.Handler => (
     Promise.resolve(fn(req, res, next)).catch((err) => next(err));
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jsonLine(o: any): string {
     return JSON.stringify(o) + '\n';
 }
@@ -63,7 +62,10 @@ function jsonLine(o: any): string {
 app.get(
     '/sandwiches/:wallet',
     catchAsync(async function (req, res, next): Promise<void> {
-        const window = 10;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const write = (obj: any) => {
+            res.write(jsonLine(obj));
+        };
         const wallet = req.params.wallet;
         if (!web3.utils.isAddress(wallet)) {
             res.statusCode = 400;
@@ -91,57 +93,9 @@ app.get(
         }
 
         res.set('Content-Type', 'application/x-ndjson');
-        res.write(jsonLine({ message: 'Fetching transactions...' }));
-        let swaps: SwapLog[];
-        try {
-            swaps = await getSwaps(
-                web3,
-                logger,
-                null, // all pools
-                addresses.uniswapV2Router,
-                wallet,
-                fromBlock,
-                toBlock,
-            );
-        } catch (e) {
-            res.write(
-                jsonLine({ message: 'Error processing request', err: e }),
-            );
-            return res.end();
-        }
-        if (swaps.length == 0) {
-            res.write(
-                jsonLine({
-                    message: `No uniswapV2 swaps found. (are you sure this address has uniswapV2 trades?)`,
-                }),
-            );
-            res.end();
-            return;
-        }
-        res.write(
-            jsonLine({
-                message: `Found ${swaps.length} uniswapV2 swaps. Now searching for sandwiches around these swaps.`,
-                count: swaps.length,
-            }),
-        );
-        let count = 0;
-        for (const swap of swaps) {
-            const sws = await findSandwich(web3, logger, swap, window);
-            count += sws.length;
-            sws.forEach((sw) => res.write(jsonLine(sw)));
-        }
-        if (count > 0) {
-            res.write(
-                jsonLine({
-                    message: `Found ${count} uniswapV2 sandwiches. Yum!`,
-                    count: count,
-                }),
-            );
-        } else {
-            res.write(
-                jsonLine({ message: `Did not find any uniswapV2 sandwiches.` }),
-            );
-        }
+        write({ message: 'Fetching transactions...' });
+        await detect(web3, logger, write, wallet, fromBlock, toBlock);
+
         res.end();
     }),
 );
