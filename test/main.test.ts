@@ -120,6 +120,27 @@ describe('sandwiched-wtf API', () => {
             });
         });
 
+        test('finds sandwich around SwapExactTokensForETH', async () => {
+            const block = 12316472;
+            const res = await request(app).get(url(block)).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(1);
+            expect(picker(sws[0])).toEqual({
+                message: 'Sandwich found',
+                openTx:
+                    '0x81702040406fb63a7a1b1ec1a895c9d1357637f5bc2381fed34dba27e7880b18',
+                targetTx:
+                    '0xef82677d92db48e8285b9541584531e3cd53137213217257c705ce307d0e2a7e',
+                closeTx:
+                    '0xfcf39b2ac09995aa8cbe8075f5cdbf6d6f37043d5c6f1955966c2d63ae43852f',
+                profit: '2599.826136379271345974',
+                profitCurrency: 'GYSR',
+                pool: 'GYSR - WETH',
+                mev: false,
+            });
+        });
+
         test('sets mev flag on bundle sandwich', async () => {
             const block = 12205788;
             const res = await request(app).get(url(block)).expect(200);
