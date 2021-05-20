@@ -1,4 +1,6 @@
 import Web3 from 'web3';
+import { tl } from './token-list';
+
 import * as utils from 'web3-utils';
 import winston from 'winston';
 import _ from 'lodash';
@@ -169,6 +171,17 @@ export class Token {
     static init(web3: Web3, logger: winston.Logger): void {
         Token.web3 = web3;
         Token.logger = logger;
+        tl.forEach((t) => {
+            if (Token.cache[t.address] !== undefined) {
+                return;
+            }
+            Token.cache[t.address] = new Token(
+                t.address,
+                t.name,
+                t.symbol,
+                t.decimals,
+            );
+        });
     }
 
     static async lookupOrCreate(address: string): Promise<Token> {
@@ -218,16 +231,20 @@ export class Token {
         address: string,
         name: string,
         symbol: string,
-        decimals: string,
+        decimals: string | number,
     ) {
-        const dec = parseInt(decimals);
-        if (isNaN(dec)) {
-            throw new Error(`token invalid decimals ${decimals}`);
-        }
         this.address = address;
         this.name = name;
         this.symbol = symbol;
-        this.decimals = dec;
+        if (typeof decimals === 'string') {
+            const dec = parseInt(decimals);
+            if (isNaN(dec)) {
+                throw new Error(`token invalid decimals ${decimals}`);
+            }
+            this.decimals = dec;
+        } else {
+            this.decimals = decimals;
+        }
     }
     toString(): string {
         return `Token(${this.address.slice(0, 8)}, ${this.symbol})`;
