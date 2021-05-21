@@ -41,6 +41,10 @@ export class Pool {
         }[factory];
     }
 
+    static lookup(address: string): Pool | undefined {
+        return Pool.cache[address];
+    }
+
     static async lookupOrCreate(address: string): Promise<Pool> {
         if (Pool.cache[address] !== undefined) {
             return Pool.cache[address];
