@@ -3,7 +3,7 @@ import winston from 'winston';
 import { utils, BigNumber } from 'ethers';
 
 import { getSwaps, SwapLog, SwapDir } from './swaps';
-import { Pool, Token } from './pools';
+import { Pool } from './pools';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,
@@ -12,13 +12,18 @@ function logWeird(log: winston.Logger, msg: string, txs: Array<string>) {
     log.warn(`Weird: ${msg} (txs ${txs}`);
 }
 
+interface Profit {
+    amount: string;
+    currency: string;
+}
+
 export interface Sandwich {
     message: string;
     openTx: string;
     targetTx: string;
     closeTx: string;
-    profit: string;
-    profitCurrency: string;
+    profit: Profit;
+    profit2: Profit;
     pool: string;
     mev: boolean;
 }
@@ -75,7 +80,7 @@ export async function findSandwich(
         if (pool === null) {
             throw new Error('null pool');
         }
-        const [profit, tok] = computeProfit(open, close, pool);
+        const profits = computeProfits(open, close, pool);
         let mev = false;
         if (target.transactionIndex <= bundle_limit) {
             const tx = await web3.eth.getTransaction(open.transactionHash);
@@ -88,8 +93,8 @@ export async function findSandwich(
             openTx: open.transactionHash,
             targetTx: target.transactionHash,
             closeTx: close.transactionHash,
-            profit: utils.formatUnits(profit, tok.decimals),
-            profitCurrency: tok.symbol,
+            profit: profits[0],
+            profit2: profits[1],
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
             mev,
         });
@@ -97,24 +102,52 @@ export async function findSandwich(
     return res;
 }
 
-function computeProfit(
-    open: SwapLog,
-    close: SwapLog,
-    pool: Pool,
-): [BigNumber, Token] {
-    let profit: BigNumber;
-    let tok: Token;
+function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
+    // "forward" is the natural profit-taking direction
+    // - open "swap x tok1 for n tok2",
+    // - (target swap tok1 for tok2)
+    // - close "swap n tok2 for y tok1"
+    // where y-x is the profit, in tok1. (This makes most sense when tok1 is
+    // ETH).
+    // But it is also possible to take a profit in the "backward" direction:
+    // - open "swap n tok1 for x tok2",
+    // - (target swap tok1 for tok2)
+    // - close "swap y tok2 for n tok1"
+    // where x-y is the profit, in tok2. (This makes most sense when tok2 is ETH, and
+    // the transaction being sandwiched is swapExactTokensForEth.)
 
+    let forward: Profit;
+    let backward: Profit;
+    let p: BigNumber;
     switch (open.swap.dir) {
         case SwapDir.ZeroToOne:
-            profit = close.swap.amount0Out.sub(open.swap.amount0In);
-            tok = pool.token0;
+            p = close.swap.amount0Out.sub(open.swap.amount0In);
+            forward = {
+                amount: utils.formatUnits(p, pool.token0.decimals),
+                currency: pool.token0.symbol,
+            };
+            p = open.swap.amount1Out.sub(close.swap.amount1In);
+            backward = {
+                amount: utils.formatUnits(p, pool.token1.decimals),
+                currency: pool.token1.symbol,
+            };
             break;
         case SwapDir.OneToZero:
-            profit = close.swap.amount1Out.sub(open.swap.amount1In);
-            tok = pool.token1;
+            p = close.swap.amount1Out.sub(open.swap.amount1In);
+            forward = {
+                amount: utils.formatUnits(p, pool.token1.decimals),
+                currency: pool.token1.symbol,
+            };
+            p = open.swap.amount0Out.sub(close.swap.amount0In);
+            backward = {
+                amount: utils.formatUnits(p, pool.token0.decimals),
+                currency: pool.token0.symbol,
+            };
     }
-    return [profit, tok];
+    if (backward.amount == '0.0') {
+        return [forward];
+    }
+    return [forward, backward];
 }
 
 function logMultipleClose(
