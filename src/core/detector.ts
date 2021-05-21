@@ -6,6 +6,7 @@ import { addresses } from './addresses';
 import { decodeSwapLog, getSwaps, SwapLog } from './swaps';
 import { getTransfers, TransferLog } from './transfers';
 import { findSandwich } from './sandwich';
+import { Pool } from './pools';
 import { uniswapPairs } from './uniswap-pair-list';
 import * as ABIs from './abis';
 
@@ -94,7 +95,8 @@ export async function detect(
             // see if this transfer is to a known uniswap pool, which would
             // be a strong hint that this is a swap. This is an optimization
             // to avoid calling getTransactionreceipt on every transfer we find.
-            if (!uniswapPairs.includes(transfer.transfer.to.toLowerCase())) {
+            const maybePool = transfer.transfer.to.toLowerCase();
+            if (!uniswapPairs.includes(maybePool) && !Pool.lookup(maybePool)) {
                 continue;
             }
             const receipt = await web3.eth.getTransactionReceipt(

@@ -4,9 +4,7 @@ import yargs from 'yargs';
 // import { Readable } from 'stream';
 
 import { config } from '../src/config/config';
-import { getSwaps } from '../src/core/swaps';
-import { findSandwich } from '../src/core/sandwich';
-import { addresses } from '../src/core/addresses';
+import { detect } from '../src/core/detector';
 import { init as initPool } from '../src/core/pools';
 
 const argv = yargs
@@ -67,23 +65,6 @@ const log = winston.createLogger({
     const from = argv.from;
     const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;
     const wallet = argv.address as string;
-    const swaps = await getSwaps(
-        web3,
-        log,
-        null, // all pools
-        addresses.uniswapV2Router,
-        wallet,
-        from,
-        to,
-    );
-    log.info({
-        message: 'Found  Uniswap swaps',
-        n: swaps.length,
-        wallet: wallet,
-    });
-    log.info({ message: 'Now searching for sandwiches' });
-    for (const userSwap of swaps) {
-        const sws = await findSandwich(web3, log, userSwap, argv.window);
-        sws.forEach((sw) => log.info(sw));
-    }
+
+    await detect(web3, log, (o) => console.log(o), wallet, from, to);
 })();
