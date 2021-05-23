@@ -72,10 +72,6 @@ export async function findSandwich(
         }
 
         const close = closes[0];
-        if (checkMismatched(log, open, target, close)) {
-            continue;
-        }
-
         const pool = await Pool.lookupOrCreate(open.address);
         if (pool === null) {
             throw new Error('null pool');
@@ -161,30 +157,4 @@ function logMultipleClose(
         target.transactionHash,
         ...closes.map((close) => close.transactionHash),
     ]);
-}
-
-function checkMismatched(
-    log: winston.Logger,
-    open: SwapLog,
-    target: SwapLog,
-    close: SwapLog,
-): boolean {
-    let a: BigNumber, b: BigNumber;
-    if (open.swap.dir == SwapDir.ZeroToOne) {
-        a = open.swap.amount1Out;
-        b = close.swap.amount1In;
-    } else {
-        a = open.swap.amount0Out;
-        b = close.swap.amount0In;
-    }
-    if (b.lt(a.mul(99).div(101)) || b.gt(a.mul(101).div(99))) {
-        logWeird(log, 'gap (>5%) in sandwich open/close amounts', [
-            open.transactionHash,
-            target.transactionHash,
-            close.transactionHash,
-            utils.formatEther(b.sub(a)), // xxx decimals
-        ]);
-        return true;
-    }
-    return false;
 }
