@@ -155,15 +155,41 @@ describe('sandwiched-wtf API', () => {
             expect(sws[0].profit.amount).toEqual('3344.067039');
         });
 
-        test('computes backward profit correctly', async () => {
+        test('finds double sandwich (interleaved) and computes backward profit correctly', async () => {
+            // It so happened that this tx has two sandwiches that both have
+            // backward profits, so we test them together, but this doesn't mean
+            // that double-sandwiches and backward profits are otherwise
+            // linked...
             const block = 11380276;
             const res = await request(app).get(url(block)).expect(200);
             const messages = parseResponse(res.text);
             const sws = sandwiches(messages);
-            expect(sws.length).toEqual(1);
+            expect(sws.length).toEqual(2);
+
             expect(sws[0].profit).toEqual({ amount: '0.0', currency: 'ROOK' });
             expect(sws[0].profit2).toEqual({
+                amount: '0.197375949528145637',
+                currency: 'WETH',
+            });
+            expect(sws[1].profit).toEqual({ amount: '0.0', currency: 'ROOK' });
+            expect(sws[1].profit2).toEqual({
                 amount: '0.167365394662967763',
+                currency: 'WETH',
+            });
+        });
+
+        test('finds double sandwich (non-interleaved) and computes profits correctly', async () => {
+            const block = 11972504;
+            const res = await request(app).get(url(block)).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(2);
+            expect(sws[0].profit).toEqual({
+                amount: '0.128048512336962075',
+                currency: 'WETH',
+            });
+            expect(sws[1].profit).toEqual({
+                amount: '1.21808712279187822',
                 currency: 'WETH',
             });
         });
