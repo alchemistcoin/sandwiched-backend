@@ -8,11 +8,13 @@ import { config } from './config/config';
 import { logger } from './config/logger';
 import { detect } from './core/detector';
 import { init as initPool } from './core/pools';
+import { init as initBlock } from './core/blocks';
 
 export const app: express.Application = express();
 
 const web3 = new Web3(config.web3_url);
 initPool(web3, logger);
+initBlock(web3, logger);
 
 if (config.env !== 'test') {
     app.use(morgan.successHandler);

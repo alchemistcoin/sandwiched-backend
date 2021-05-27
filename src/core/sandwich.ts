@@ -4,6 +4,7 @@ import { utils, BigNumber } from 'ethers';
 
 import { getSwaps, SwapLog, SwapDir } from './swaps';
 import { Pool } from './pools';
+import { Block } from './blocks';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,
@@ -17,11 +18,62 @@ interface Profit {
     currency: string;
 }
 
+interface SwapInfo {
+    tx: string;
+    ts: string;
+    amountIn: string;
+    currencyIn: string;
+    amountOut: string;
+    currencyOut: string;
+}
+
+async function SwapInfoFromLog(log: SwapLog): Promise<SwapInfo> {
+    const pool = await Pool.lookupOrCreate(log.address);
+    if (pool === null) {
+        throw new Error('null pool');
+    }
+
+    const block = await Block.lookupOrCreate(log.blockNumber);
+    const ts =
+        typeof block.timestamp === 'string'
+            ? block.timestamp
+            : new Date(block.timestamp * 1000).toUTCString();
+
+    const [amountIn, currencyIn] = log.swap.amount0In.isZero()
+        ? [
+              utils.formatUnits(log.swap.amount1In, pool.token1.decimals),
+              pool.token1.symbol,
+          ]
+        : [
+              utils.formatUnits(log.swap.amount0In, pool.token0.decimals),
+              pool.token0.symbol,
+          ];
+
+    const [amountOut, currencyOut] = log.swap.amount0Out.isZero()
+        ? [
+              utils.formatUnits(log.swap.amount1Out, pool.token1.decimals),
+              pool.token1.symbol,
+          ]
+        : [
+              utils.formatUnits(log.swap.amount0Out, pool.token0.decimals),
+              pool.token0.symbol,
+          ];
+
+    return {
+        tx: log.transactionHash,
+        ts,
+        amountIn,
+        currencyIn,
+        amountOut,
+        currencyOut,
+    };
+}
+
 export interface Sandwich {
     message: string;
-    openTx: string;
-    targetTx: string;
-    closeTx: string;
+    open: SwapInfo;
+    target: SwapInfo;
+    close: SwapInfo;
     profit: Profit;
     profit2: Profit;
     pool: string;
@@ -84,11 +136,16 @@ export async function findSandwich(
                 mev = true;
             }
         }
+        const [openSI, targetSI, closeSI] = await Promise.all([
+            SwapInfoFromLog(open),
+            SwapInfoFromLog(target),
+            SwapInfoFromLog(close),
+        ]);
         res.push({
             message: 'Sandwich found',
-            openTx: open.transactionHash,
-            targetTx: target.transactionHash,
-            closeTx: close.transactionHash,
+            open: openSI,
+            target: targetSI,
+            close: closeSI,
             profit: profits[0],
             profit2: profits[1],
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,

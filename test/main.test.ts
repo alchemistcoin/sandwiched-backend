@@ -12,7 +12,7 @@ function parseResponse(text: string): message[] {
 }
 
 function isSandwich(o: any): o is Sandwich {
-    return 'targetTx' in o;
+    return 'profit' in o;
 }
 
 function sandwiches(messages: any): Sandwich[] {
@@ -41,7 +41,6 @@ describe('sandwiched-wtf API', () => {
 
     describe('sandwich-finding', () => {
         jest.setTimeout(30000);
-
         test('finds sandwich around SwapExactETHforTokens (WETH is token0)', async () => {
             const block = 12208431;
             const res = await request(app).get(url(block)).expect(200);
@@ -50,12 +49,33 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
-                openTx:
-                    '0x0bcd7d7fd9895023002c5181d39e5de167ee179813dc63c385d5e64d26758ec1',
-                targetTx:
-                    '0x320fbc4a1de7324a39278aa8213f392364a6dd0546b62fd45f2ccb84558598bf',
-                closeTx:
-                    '0x53d2e9170eb2a21330ddbfc5a4e9e02e31de3e76738cd1659946256abcb417f7',
+                open: {
+                    amountIn: '20.0',
+                    amountOut: '8226.342643528036846659',
+                    currencyIn: 'WETH',
+                    currencyOut: 'B20',
+                    ts: 'Fri, 09 Apr 2021 22:46:38 GMT',
+                    tx:
+                        '0x0bcd7d7fd9895023002c5181d39e5de167ee179813dc63c385d5e64d26758ec1',
+                },
+                target: {
+                    amountIn: '30.0',
+                    amountOut: '11331.416153131322048365',
+                    currencyIn: 'WETH',
+                    currencyOut: 'B20',
+                    ts: 'Fri, 09 Apr 2021 22:46:38 GMT',
+                    tx:
+                        '0x320fbc4a1de7324a39278aa8213f392364a6dd0546b62fd45f2ccb84558598bf',
+                },
+                close: {
+                    amountIn: '8226.342643528036846659',
+                    amountOut: '21.770266036457971241',
+                    currencyIn: 'B20',
+                    currencyOut: 'WETH',
+                    ts: 'Fri, 09 Apr 2021 22:47:37 GMT',
+                    tx:
+                        '0x53d2e9170eb2a21330ddbfc5a4e9e02e31de3e76738cd1659946256abcb417f7',
+                },
                 profit: { amount: '1.770266036457971241', currency: 'WETH' },
                 pool: 'WETH - B20',
                 mev: false,
@@ -70,12 +90,33 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
-                openTx:
-                    '0x699de2603b40fea219afeccf388ea6c66b36758d89ab1eebb3324239ee442378',
-                targetTx:
-                    '0xd82a86f8324fba7e0d374b461d6faf0c39a0d53fde06505d6c2cb8447609c617',
-                closeTx:
-                    '0x62fedc4df9aebe7cdf7965fe1e35de7d657c94db2c55551c1954eb823a0351b6',
+                open: {
+                    amountIn: '220.0',
+                    amountOut: '1234.077701279797405074',
+                    currencyIn: 'WETH',
+                    currencyOut: 'FARM',
+                    ts: 'Mon, 22 Feb 2021 18:41:58 GMT',
+                    tx:
+                        '0x699de2603b40fea219afeccf388ea6c66b36758d89ab1eebb3324239ee442378',
+                },
+                target: {
+                    amountIn: '153.0',
+                    amountOut: '782.613521863157224673',
+                    currencyIn: 'WETH',
+                    currencyOut: 'FARM',
+                    ts: 'Mon, 22 Feb 2021 18:41:58 GMT',
+                    tx:
+                        '0xd82a86f8324fba7e0d374b461d6faf0c39a0d53fde06505d6c2cb8447609c617',
+                },
+                close: {
+                    amountIn: '1234.077701279797405074',
+                    amountOut: '234.320954423950744728',
+                    currencyIn: 'FARM',
+                    currencyOut: 'WETH',
+                    ts: 'Mon, 22 Feb 2021 18:42:35 GMT',
+                    tx:
+                        '0x62fedc4df9aebe7cdf7965fe1e35de7d657c94db2c55551c1954eb823a0351b6',
+                },
                 profit: { amount: '14.320954423950744728', currency: 'WETH' },
                 pool: 'FARM - WETH',
                 mev: false,
@@ -90,12 +131,33 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
-                openTx:
-                    '0xe1f01378c5e9e825bd428cd755e68e01f46314a0d7926c940cd9218578a12139',
-                targetTx:
-                    '0x68dd28d3ce2a5ef90680f5b4e3b86af2501973d2107b642f0f075d92131a56c5',
-                closeTx:
-                    '0x5a54f6726c168aedf1171ce686dd5d05d03bb99de212e30d5da05ea316bdec64',
+                open: {
+                    amountIn: '42.0',
+                    amountOut: '33327.249924402182844634',
+                    currencyIn: 'ibETH',
+                    currencyOut: 'ALPHA',
+                    ts: 'Sun, 07 Feb 2021 04:48:56 GMT',
+                    tx:
+                        '0xe1f01378c5e9e825bd428cd755e68e01f46314a0d7926c940cd9218578a12139',
+                },
+                target: {
+                    amountIn: '290.0',
+                    amountOut: '225702.625345847900102161',
+                    currencyIn: 'ibETH',
+                    currencyOut: 'ALPHA',
+                    ts: 'Sun, 07 Feb 2021 04:48:56 GMT',
+                    tx:
+                        '0x68dd28d3ce2a5ef90680f5b4e3b86af2501973d2107b642f0f075d92131a56c5',
+                },
+                close: {
+                    amountIn: '33327.249924402182844634',
+                    amountOut: '43.026020662373103583',
+                    currencyIn: 'ALPHA',
+                    currencyOut: 'ibETH',
+                    ts: 'Sun, 07 Feb 2021 04:50:13 GMT',
+                    tx:
+                        '0x5a54f6726c168aedf1171ce686dd5d05d03bb99de212e30d5da05ea316bdec64',
+                },
                 profit: { amount: '1.026020662373103583', currency: 'ibETH' },
                 pool: 'ibETH - ALPHA',
                 mev: false,
@@ -110,12 +172,33 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
-                openTx:
-                    '0x81702040406fb63a7a1b1ec1a895c9d1357637f5bc2381fed34dba27e7880b18',
-                targetTx:
-                    '0xef82677d92db48e8285b9541584531e3cd53137213217257c705ce307d0e2a7e',
-                closeTx:
-                    '0xfcf39b2ac09995aa8cbe8075f5cdbf6d6f37043d5c6f1955966c2d63ae43852f',
+                open: {
+                    amountIn: '28544.179912330024570403',
+                    amountOut: '12.061108125344495256',
+                    currencyIn: 'GYSR',
+                    currencyOut: 'WETH',
+                    ts: 'Mon, 26 Apr 2021 14:23:33 GMT',
+                    tx:
+                        '0x81702040406fb63a7a1b1ec1a895c9d1357637f5bc2381fed34dba27e7880b18',
+                },
+                target: {
+                    amountIn: '65207.951835566551907693',
+                    amountOut: '25.671834777932286375',
+                    currencyIn: 'GYSR',
+                    currencyOut: 'WETH',
+                    ts: 'Mon, 26 Apr 2021 14:23:33 GMT',
+                    tx:
+                        '0xef82677d92db48e8285b9541584531e3cd53137213217257c705ce307d0e2a7e',
+                },
+                close: {
+                    amountIn: '12.021306468530860032',
+                    amountOut: '31144.006048709295916377',
+                    currencyIn: 'WETH',
+                    currencyOut: 'GYSR',
+                    ts: 'Mon, 26 Apr 2021 14:24:14 GMT',
+                    tx:
+                        '0xfcf39b2ac09995aa8cbe8075f5cdbf6d6f37043d5c6f1955966c2d63ae43852f',
+                },
                 profit: { amount: '2599.826136379271345974', currency: 'GYSR' },
                 // By happenstance this one has a backward profit as well as a
                 // forward profit. This wasn't explicitly the purpose of this test
