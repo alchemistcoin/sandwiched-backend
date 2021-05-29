@@ -2,6 +2,9 @@ import { agent as request } from 'supertest';
 import { app } from '../src/app';
 import { Sandwich } from '../src/core/sandwich';
 
+import { PoolCache } from '../src/core/pools';
+import { BlockCache } from '../src/core/blocks';
+
 type message = { [key: string]: string };
 
 function parseResponse(text: string): message[] {
@@ -25,6 +28,10 @@ describe('sandwiched-wtf API', () => {
         return `/sandwiches/${Oxb1}?fromBlock=${block}&toBlock=${block + 1}`;
     }
 
+    afterAll(() => {
+        PoolCache.client._c.end(true);
+        BlockCache.client._c.end(true);
+    });
     describe('bad requests', () => {
         test('returns 400 for bad address', async () => {
             const resp = await request(app).get(`/sandwiches/Ox123456789`);

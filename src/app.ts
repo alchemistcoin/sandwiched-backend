@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import * as morgan from './config/morgan';
+import * as redis from 'redis';
 import rateLimit from 'express-rate-limit';
 import Web3 from 'web3';
 
@@ -13,8 +14,16 @@ import { init as initBlock } from './core/blocks';
 export const app: express.Application = express();
 
 const web3 = new Web3(config.web3_url);
-initPool(web3, logger);
-initBlock(web3, logger);
+
+(async () => {
+    try {
+        await initPool(web3, logger, redis.createClient(config.redis_url));
+    } catch (e) {
+        logger.error('calling initPool', e);
+    }
+})();
+
+initBlock(web3, logger, redis.createClient(config.redis_url));
 
 if (config.env !== 'test') {
     app.use(morgan.successHandler);

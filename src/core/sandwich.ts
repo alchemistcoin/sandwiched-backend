@@ -3,8 +3,8 @@ import winston from 'winston';
 import { utils, BigNumber } from 'ethers';
 
 import { getSwaps, SwapLog, SwapDir } from './swaps';
-import { Pool } from './pools';
-import { Block } from './blocks';
+import { Pool, PoolCache } from './pools';
+import { BlockCache } from './blocks';
 
 // temp for CLI... eventually this should just return sandwiches as it
 // finds them (EventEmitter?) and let the caller do what they want,
@@ -28,12 +28,12 @@ interface SwapInfo {
 }
 
 async function SwapInfoFromLog(log: SwapLog): Promise<SwapInfo> {
-    const pool = await Pool.lookupOrCreate(log.address);
+    const pool = await PoolCache.lookupOrEnter(log.address);
     if (pool === null) {
         throw new Error('null pool');
     }
 
-    const block = await Block.lookupOrCreate(log.blockNumber);
+    const block = await BlockCache.lookupOrEnter(log.blockNumber);
     const ts =
         typeof block.timestamp === 'string'
             ? block.timestamp
@@ -124,7 +124,7 @@ export async function findSandwich(
         }
 
         const close = closes[0];
-        const pool = await Pool.lookupOrCreate(open.address);
+        const pool = await PoolCache.lookupOrEnter(open.address);
         if (pool === null) {
             throw new Error('null pool');
         }

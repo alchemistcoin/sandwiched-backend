@@ -1,7 +1,7 @@
 import Web3 from 'web3';
 import winston from 'winston';
 import yargs from 'yargs';
-// import { Readable } from 'stream';
+import * as redis from 'redis';
 
 import { config } from '../src/config/config';
 import { detect } from '../src/core/detector';
@@ -60,7 +60,7 @@ const log = winston.createLogger({
     const web3 = new Web3(
         argv.web3_url ? argv.web3_url : process.env.WEB3_PROVIDER_URI,
     );
-    initPool(web3, log);
+    initPool(web3, log, redis.createClient());
 
     const from = argv.from;
     const to = argv.to == 'latest' ? await web3.eth.getBlockNumber() : argv.to;
