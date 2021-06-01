@@ -8,22 +8,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [14.x]
+    container: node:14-buster
 
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
       - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
       - run: npm ci
       - run: npx prettier --check src scripts
       - run: npm run lint
       - run: npm run build
-      #- run: npm run test
+      - run: npm run test
+        env:
+          WEB3_PROVIDER_URI: ${{ secrets.WEB3_PROVIDER_URI }}
   deploy:
     runs-on: ubuntu-latest
     needs: build
