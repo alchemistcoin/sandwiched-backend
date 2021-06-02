@@ -1,48 +1,72 @@
 import Web3 from 'web3';
-
+import * as redis from 'redis';
 import winston from 'winston';
-import _ from 'lodash';
 
-export function init(web3: Web3, log: winston.Logger): void {
+import { RedisClientAsync } from '../redis';
+
+export function init(
+    web3: Web3,
+    log: winston.Logger,
+    redis: redis.RedisClient,
+): void {
     // meh pattern
-    Block.init(web3, log);
+    BlockCache.init(web3, log, redis);
 }
 
-export class Block {
-    static readonly cache: { [index: string]: Block } = {};
-    static web3: Web3;
-    static logger: winston.Logger;
-    static init(web3: Web3, logger: winston.Logger): void {
-        Block.web3 = web3;
-        Block.logger = logger;
-    }
-
-    static lookup(blockNumber: number): Block | undefined {
-        return Block.cache[blockNumber];
-    }
-
-    static async lookupOrCreate(blockNumber: number): Promise<Block> {
-        if (Block.cache[blockNumber] !== undefined) {
-            return Block.cache[blockNumber];
-        }
-        Block.cache[blockNumber] = await Block.newBlock(blockNumber);
-        return Block.cache[blockNumber];
-    }
-
-    static async newBlock(blockNumber: number): Promise<Block> {
-        Block.logger.debug(`newBlock: ${blockNumber}`);
-        const block = await Block.web3.eth.getBlock(blockNumber);
-
-        return new Block(block.number, block.miner, block.timestamp);
-    }
-
+type Block = {
     readonly number: number;
     readonly miner: string;
     readonly timestamp: number | string;
+};
 
-    constructor(number: number, miner: string, timestamp: number | string) {
-        this.number = number;
-        this.miner = miner;
-        this.timestamp = timestamp;
+export class BlockCache {
+    static client: RedisClientAsync;
+    static web3: Web3;
+    static logger: winston.Logger;
+    static init(
+        web3: Web3,
+        logger: winston.Logger,
+        redis: redis.RedisClient,
+    ): void {
+        BlockCache.client = new RedisClientAsync(logger, redis);
+        BlockCache.web3 = web3;
+        BlockCache.logger = logger;
+    }
+    static async lookup(bn: number): Promise<Block | null> {
+        const key = BlockCache.key(bn);
+        const block = await BlockCache.client.get(key);
+        if (block == null) {
+            return null;
+        }
+        return JSON.parse(block);
+    }
+    static key(bn: number): string {
+        return `block:${bn}`;
+    }
+
+    static async cache(key: string, block: Block): Promise<string> {
+        return await BlockCache.client.set(key, JSON.stringify(block));
+    }
+
+    static async lookupOrEnter(bn: number): Promise<Block> {
+        const key = BlockCache.key(bn);
+        let block = await BlockCache.lookup(bn);
+        if (block != null) {
+            return block;
+        }
+        block = await BlockCache.newBlock(bn);
+        await BlockCache.cache(key, block);
+        return block;
+    }
+
+    static async newBlock(blockNumber: number): Promise<Block> {
+        BlockCache.logger.debug(`newBlock: ${blockNumber}`);
+        const block = await BlockCache.web3.eth.getBlock(blockNumber);
+
+        return {
+            number: block.number,
+            miner: block.miner,
+            timestamp: block.timestamp,
+        };
     }
 }

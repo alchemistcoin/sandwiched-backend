@@ -2,24 +2,41 @@ import Web3 from 'web3';
 import { tl } from './token-list';
 
 import * as utils from 'web3-utils';
+import * as redis from 'redis';
+import { RedisClientAsync } from '../redis';
 import winston from 'winston';
 import _ from 'lodash';
 
 type Exchange = 'UniswapV2';
 
-export function init(web3: Web3, log: winston.Logger): void {
+export async function init(
+    web3: Web3,
+    log: winston.Logger,
+    redis: redis.RedisClient,
+): Promise<void> {
     // meh pattern
-    Pool.init(web3, log);
-    Token.init(web3, log);
+    PoolCache.init(web3, log, redis);
+    await TokenCache.init(web3, log, redis);
 }
 
-export class Pool {
-    static readonly cache: { [index: string]: Pool } = {};
+export type Pool = {
+    readonly address: string;
+    readonly dex: Exchange;
+    readonly token0: Token;
+    readonly token1: Token;
+};
+export class PoolCache {
+    static client: RedisClientAsync;
     static web3: Web3;
     static logger: winston.Logger;
-    static init(web3: Web3, logger: winston.Logger): void {
-        Pool.web3 = web3;
-        Pool.logger = logger;
+    static init(
+        web3: Web3,
+        logger: winston.Logger,
+        redis: redis.RedisClient,
+    ): void {
+        PoolCache.client = new RedisClientAsync(logger, redis);
+        PoolCache.web3 = web3;
+        PoolCache.logger = logger;
     }
 
     static async poolType(address: string): Promise<Exchange | undefined> {
@@ -34,28 +51,44 @@ export class Pool {
                 constant: true, // for backward-compatibility
             },
         ];
-        const contract = new Pool.web3.eth.Contract(ABI, address);
+        const contract = new PoolCache.web3.eth.Contract(ABI, address);
         const factory = await contract.methods.factory().call();
         return {
             '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f': 'UniswapV2',
         }[factory];
     }
 
-    static lookup(address: string): Pool | undefined {
-        return Pool.cache[address];
+    static key(address: string): string {
+        return `pool:${address}`;
     }
 
-    static async lookupOrCreate(address: string): Promise<Pool> {
-        if (Pool.cache[address] !== undefined) {
-            return Pool.cache[address];
+    static async lookup(address: string): Promise<Pool | null> {
+        const key = PoolCache.key(address);
+        const pool = await PoolCache.client.get(key);
+        if (pool == null) {
+            return null;
         }
-        Pool.cache[address] = await Pool.newPool(address);
-        return Pool.cache[address];
+        return JSON.parse(pool);
+    }
+
+    static async lookupOrEnter(address: string): Promise<Pool> {
+        const key = PoolCache.key(address);
+        let pool = await PoolCache.lookup(address);
+        if (pool != null) {
+            return pool;
+        }
+        pool = await PoolCache.newPool(address);
+        await PoolCache.cache(key, pool);
+        return pool;
+    }
+
+    static async cache(key: string, pool: Pool): Promise<string> {
+        return await PoolCache.client.set(key, JSON.stringify(pool));
     }
 
     static async newPool(address: string): Promise<Pool> {
-        Pool.logger.debug(`newPool: ${address}`);
-        if ((await Pool.poolType(address)) === undefined) {
+        PoolCache.logger.debug(`newPool: ${address}`);
+        if ((await PoolCache.poolType(address)) === undefined) {
             throw new Error(`unknown pool type for address ${address}`);
         }
         // only Uniswapv2 for now.
@@ -89,30 +122,13 @@ export class Pool {
                 type: 'function',
             },
         ];
-        const contract = new Pool.web3.eth.Contract(ABI, address);
+        const contract = new PoolCache.web3.eth.Contract(ABI, address);
         const [token0, token1] = await Promise.all([
-            contract.methods.token0().call().then(Token.lookupOrCreate),
-            contract.methods.token1().call().then(Token.lookupOrCreate),
+            contract.methods.token0().call().then(TokenCache.lookupOrEnter),
+            contract.methods.token1().call().then(TokenCache.lookupOrEnter),
         ]);
 
-        return new Pool(address, 'UniswapV2', token0, token1);
-    }
-
-    readonly address: string;
-    readonly dex: Exchange;
-    readonly token0: Token;
-    readonly token1: Token;
-
-    constructor(address: string, dex: Exchange, token0: Token, token1: Token) {
-        this.address = address;
-        this.dex = dex;
-        this.token0 = token0;
-        this.token1 = token1;
-    }
-    toString(): string {
-        return `Pool(${this.address.slice(0, 8)}, ${this.token0}-${
-            this.token1
-        })`;
+        return { address, dex: 'UniswapV2', token0, token1 };
     }
 }
 
@@ -167,38 +183,75 @@ const detailedERC20bytes32ABI = _.cloneDeep(detailedERC20ABI);
 detailedERC20bytes32ABI[0].outputs[0].type = 'bytes32';
 detailedERC20bytes32ABI[2].outputs[0].type = 'bytes32';
 
-export class Token {
-    static readonly cache: { [index: string]: Token } = {};
+type Token = {
+    readonly address: string;
+    readonly symbol: string;
+    readonly name: string;
+    readonly decimals: number;
+};
+
+export class TokenCache {
+    static client: RedisClientAsync;
     static web3: Web3;
     static logger: winston.Logger;
     static ABI: utils.AbiItem[];
-    static init(web3: Web3, logger: winston.Logger): void {
-        Token.web3 = web3;
-        Token.logger = logger;
-        tl.forEach((t) => {
-            if (Token.cache[t.address] !== undefined) {
-                return;
-            }
-            Token.cache[t.address] = new Token(
-                t.address,
-                t.name,
-                t.symbol,
-                t.decimals,
-            );
-        });
+    static async init(
+        web3: Web3,
+        logger: winston.Logger,
+        redis: redis.RedisClient,
+    ): Promise<void> {
+        TokenCache.client = new RedisClientAsync(logger, redis);
+        TokenCache.web3 = web3;
+        TokenCache.logger = logger;
+        for (const t of tl) {
+            await TokenCache.cache(TokenCache.key(t.address), {
+                address: t.address,
+                name: t.name,
+                symbol: t.symbol,
+                decimals: t.decimals,
+            });
+        }
     }
 
-    static async lookupOrCreate(address: string): Promise<Token> {
-        if (Token.cache[address] !== undefined) {
-            return Token.cache[address];
+    static key(address: string): string {
+        return `token:${address}`;
+    }
+
+    static async lookupOrEnter(address: string): Promise<Token> {
+        const key = TokenCache.key(address);
+        const token = await TokenCache.client.hgetall(key);
+        if (token != null) {
+            return {
+                decimals: parseInt(token.decimals),
+                address: token.address,
+                symbol: token.symbol,
+                name: token.name,
+            };
         }
-        Token.cache[address] = await Token.newToken(address);
-        return Token.cache[address];
+        try {
+            const token = await TokenCache.newToken(address);
+            await TokenCache.cache(key, token);
+            return token;
+        } catch (err) {
+            TokenCache.logger.error('error creating token', err);
+            return {
+                address,
+                name: 'unknown',
+                symbol: 'unknown',
+                decimals: 18,
+            };
+        }
+    }
+
+    static async cache(key: string, tok: Token): Promise<string> {
+        return await TokenCache.client.hmset(key, tok);
     }
 
     static async newToken(address: string): Promise<Token> {
-        Pool.logger.debug(`newToken: ${address}`);
-        const contract = new Token.web3.eth.Contract(detailedERC20ABI, address);
+        const contract = new TokenCache.web3.eth.Contract(
+            detailedERC20ABI,
+            address,
+        );
         let name: string, symbol: string, decimals: string;
         [name, symbol, decimals] = await Promise.all([
             contract.methods.name().call(),
@@ -206,7 +259,7 @@ export class Token {
             contract.methods.decimals().call(),
         ])
             .catch(async () => {
-                const contract = new Token.web3.eth.Contract(
+                const contract = new TokenCache.web3.eth.Contract(
                     detailedERC20bytes32ABI,
                     address,
                 );
@@ -219,38 +272,18 @@ export class Token {
                 symbol = utils.toUtf8(symbol);
                 return [name, symbol, decimals];
             })
-            .catch(() => {
-                // for contracts without name/symbol (for example 0xEB9951021698B42e4399f9cBb6267Aa35F82D59D)
-                return ['unknown', 'unknown', '18'];
+            .catch((err) => {
+                if (err.toString().includes('execution reverted')) {
+                    // contracts without name/symbol (for example 0xEB9951021698B42e4399f9cBb6267Aa35F82D59D)
+                    return ['unknown', 'unknown', '18'];
+                }
+                throw err;
             });
 
-        return new Token(address, name, symbol, decimals);
-    }
-
-    readonly address: string;
-    readonly symbol: string;
-    readonly name: string;
-    readonly decimals: number;
-    constructor(
-        address: string,
-        name: string,
-        symbol: string,
-        decimals: string | number,
-    ) {
-        this.address = address;
-        this.name = name;
-        this.symbol = symbol;
-        if (typeof decimals === 'string') {
-            const dec = parseInt(decimals);
-            if (isNaN(dec)) {
-                throw new Error(`token invalid decimals ${decimals}`);
-            }
-            this.decimals = dec;
-        } else {
-            this.decimals = decimals;
+        if (isNaN(parseInt(decimals))) {
+            throw new Error(`token invalid decimals ${decimals}`);
         }
-    }
-    toString(): string {
-        return `Token(${this.address.slice(0, 8)}, ${this.symbol})`;
+
+        return { address, name, symbol, decimals: parseInt(decimals) };
     }
 }
