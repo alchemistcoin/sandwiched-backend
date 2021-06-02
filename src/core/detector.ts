@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { addresses } from './addresses';
 import { decodeSwapLog, getSwaps, SwapLog } from './swaps';
 import { getTransfers, TransferLog } from './transfers';
-import { findSandwich } from './sandwich';
+import { Sandwich, findSandwich } from './sandwich';
 import { PoolCache } from './pools';
 import { uniswapPairs } from './uniswap-pair-list';
 import * as ABIs from './abis';
@@ -80,8 +80,9 @@ export async function detect(
         return;
     }
     write({
-        message: `Found ${swapsAndTransfers.length} uniswapV2 swaps and transfers. Now searching for sandwiches around these swaps.`,
-        count: swapsAndTransfers.length,
+        message: `Found ${swaps.length} uniswapV2 swaps and ${transfers.length} transfer. Now searching for sandwiches around these swaps.`,
+        swaps: swaps.length,
+        transfers: transfers.length,
     });
 
     const isTransfer = (o: SwapLog | TransferLog): boolean => 'transfer' in o;
@@ -98,7 +99,7 @@ export async function detect(
             const maybePool = transfer.transfer.to.toLowerCase();
             if (
                 !uniswapPairs.includes(maybePool) &&
-                !PoolCache.lookup(maybePool)
+                !(await PoolCache.lookup(maybePool))
             ) {
                 continue;
             }
@@ -121,7 +122,13 @@ export async function detect(
                 continue;
             }
             seen[swap.transactionHash] = 1;
-            const sws = await findSandwich(web3, logger, swap, window);
+            let sws: Sandwich[];
+            try {
+                sws = await findSandwich(web3, logger, swap, window);
+            } catch (e) {
+                logger.error(e);
+                continue;
+            }
             count += sws.length;
             sws.forEach(write);
         }
