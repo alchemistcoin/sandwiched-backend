@@ -15,6 +15,10 @@ export const app: express.Application = express();
 
 const web3 = new Web3(config.web3_url);
 
+for (const item in config) {
+    logger.info(`${item}: ${config[item]}`);
+}
+
 (async () => {
     try {
         await initPool(web3, logger, redis.createClient(config.redis_url));
@@ -122,15 +126,17 @@ app.use(
     },
 );
 
-app.use(((err, _req: express.Request, res: express.Response) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use(((err, _req: express.Request, res: express.Response, _next) => {
+    if (res.statusCode !== undefined) {
+        return _next(err);
+    }
     err.statusCode = 500;
     if (config.env === 'production') {
         err.message = 'internal server error';
         err.stack = undefined;
     }
 
-    if (config.env === 'development') {
-        logger.error(err);
-    }
+    logger.error(err);
     res.status(500).send(err);
 }) as express.ErrorRequestHandler);

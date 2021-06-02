@@ -6,7 +6,7 @@
         "node": ">= 14.16"
     },
     "scripts": {
-        "start": "node dist/src/index.js",
+        "start": "NODE_ENV=production node dist/src/index.js",
         "dev": "NODE_ENV=development nodemon node dist/src/index.js",
         "clean": "rimraf coverage dist tmp",
         "build": "tsc -p tsconfig.json",
