@@ -2,8 +2,8 @@ import { agent as request } from 'supertest';
 import { app } from '../src/app';
 import { Sandwich } from '../src/core/sandwich';
 
-import { PoolCache } from '../src/core/pools';
-import { BlockCache } from '../src/core/blocks';
+import { PoolCache } from '../src/services/poolcache';
+import { BlockCache } from '../src/services/blockcache';
 
 type message = { [key: string]: string };
 

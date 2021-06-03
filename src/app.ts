@@ -8,8 +8,7 @@ import Web3 from 'web3';
 import { config } from './config/config';
 import { logger } from './config/logger';
 import { detect } from './core/detector';
-import { init as initPool } from './core/pools';
-import { init as initBlock } from './core/blocks';
+import init from './services/init';
 
 export const app: express.Application = express();
 
@@ -21,13 +20,11 @@ for (const item in config) {
 
 (async () => {
     try {
-        await initPool(web3, logger, redis.createClient(config.redis_url));
+        await init(web3, logger, redis.createClient(config.redis_url));
     } catch (e) {
-        logger.error('calling initPool', e);
+        logger.error('calling init', e);
     }
 })();
-
-initBlock(web3, logger, redis.createClient(config.redis_url));
 
 if (config.env !== 'test') {
     app.use(morgan.successHandler);
