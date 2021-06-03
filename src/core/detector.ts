@@ -6,7 +6,7 @@ import { addresses } from './addresses';
 import { decodeSwapLog, getSwaps, SwapLog } from './swaps';
 import { getTransfers, TransferLog } from './transfers';
 import { Sandwich, findSandwich } from './sandwich';
-import { PoolCache } from './pools';
+import { PoolService } from '../services/pools';
 import { uniswapPairs } from './uniswap-pair-list';
 import * as ABIs from './abis';
 
@@ -99,7 +99,7 @@ export async function detect(
             const maybePool = transfer.transfer.to.toLowerCase();
             if (
                 !uniswapPairs.includes(maybePool) &&
-                !(await PoolCache.lookup(maybePool))
+                !(await PoolService.has(maybePool))
             ) {
                 continue;
             }
