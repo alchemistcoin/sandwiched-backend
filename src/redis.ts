@@ -12,11 +12,13 @@ export class RedisClientAsync {
 
     private get_: (key: string) => Promise<string>;
     private set_: (key: string, value: string) => Promise<string>;
+    private del_: (key: string) => Promise<number>;
 
     constructor(logger: Logger, client: redis.RedisClient) {
         this.hgetall_ = promisify(client.hgetall).bind(client);
         this.hmset_ = promisify(client.hmset).bind(client);
         this.get_ = promisify(client.get).bind(client);
+        this.del_ = promisify(client.del).bind(client);
         this.set_ = promisify(client.set).bind(client);
         this._c = client;
         client.on('error', function (error) {
@@ -26,6 +28,10 @@ export class RedisClientAsync {
 
     public get(key: string): Promise<string> {
         return this.get_(key);
+    }
+
+    public del(key: string): Promise<number> {
+        return this.del_(key);
     }
 
     public set(key: string, value: string): Promise<string> {

@@ -7,6 +7,7 @@ import { decodeSwapLog, getSwaps, SwapLog } from './swaps';
 import { getTransfers, TransferLog } from './transfers';
 import { Sandwich, findSandwich } from './sandwich';
 import { PoolService } from '../services/pools';
+import { SandwichCache } from '../services/sandwichcache';
 import { uniswapPairs } from './uniswap-pair-list';
 import * as ABIs from './abis';
 
@@ -21,6 +22,35 @@ export async function detect(
     fromBlock: number,
     toBlock: number,
 ): Promise<void> {
+    let cachedFromBlock = -1;
+    const writeSandwich = (o: any) => {
+        write(o);
+        sandwiches.push(o);
+    };
+    const sandwiches = [];
+    let cachedSandwiches = await SandwichCache.lookup(wallet);
+    if (
+        cachedSandwiches != null &&
+        (fromBlock != cachedSandwiches.fromBlock ||
+            toBlock < cachedSandwiches.toBlock)
+    ) {
+        // We only try to use the cache if the new range is
+        // left-aligned with and wider than the cached range. This
+        // covers the regular use case where the user requests "all
+        // blocks" which goes from 0 to head. For the general case, we
+        // could leverage the cache in situations where the is some
+        // overlap between cache range and requested range, but this
+        // is not of relevance at this point.
+        SandwichCache.del(wallet);
+        cachedSandwiches = null;
+    }
+    if (cachedSandwiches != null) {
+        cachedFromBlock = cachedSandwiches.fromBlock;
+        fromBlock = cachedSandwiches.toBlock;
+        for (const sw of cachedSandwiches.sandwiches) {
+            writeSandwich(sw);
+        }
+    }
     const window = 10;
     const swapsP = getSwaps(
         web3,
@@ -73,21 +103,21 @@ export async function detect(
         },
     ]);
 
-    if (swapsAndTransfers.length == 0) {
+    if (sandwiches.length + swapsAndTransfers.length == 0) {
         write({
             message: `No uniswapV2 swaps found. (are you sure this address has uniswapV2 trades?)`,
         });
         return;
     }
-    write({
-        message: `Found ${swaps.length} uniswapV2 swaps and ${transfers.length} transfer. Now searching for sandwiches around these swaps.`,
-        swaps: swaps.length,
-        transfers: transfers.length,
-    });
-
+    if (swapsAndTransfers.length != 0) {
+        write({
+            message: `Found ${swaps.length} uniswapV2 swaps and ${transfers.length} transfer. Now searching for sandwiches around these swaps.`,
+            swaps: swaps.length,
+            transfers: transfers.length,
+        });
+    }
     const isTransfer = (o: SwapLog | TransferLog): boolean => 'transfer' in o;
 
-    let count = 0;
     const seen = {};
     for (const log of swapsAndTransfers) {
         const transfer = log as TransferLog;
@@ -129,15 +159,20 @@ export async function detect(
                 logger.error(e);
                 continue;
             }
-            count += sws.length;
-            sws.forEach(write);
+            sws.forEach(writeSandwich);
         }
     }
-    if (count > 0) {
+    if (sandwiches.length > 0) {
         write({
-            message: `Found ${count} uniswapV2 sandwiches. Yum!`,
-            count: count,
+            message: `Found ${sandwiches.length} uniswapV2 sandwiches. Yum!`,
+            count: sandwiches.length,
         });
+        SandwichCache.cache(
+            wallet,
+            cachedFromBlock < 0 ? fromBlock : cachedFromBlock,
+            toBlock,
+            sandwiches,
+        );
     } else {
         write({ message: `Did not find any uniswapV2 sandwiches.` });
     }
