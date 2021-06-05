@@ -1,6 +1,7 @@
 import { agent as request } from 'supertest';
 import { app } from '../src/app';
 import { Sandwich } from '../src/core/sandwich';
+import { config } from '../src/config/config';
 
 import { PoolCache } from '../src/services/poolcache';
 import { BlockCache } from '../src/services/blockcache';
@@ -28,7 +29,11 @@ describe('sandwiched-wtf API', () => {
         return `/sandwiches/${Oxb1}?fromBlock=${block}&toBlock=${block + 1}`;
     }
 
-    afterAll(() => {
+    afterAll(async () => {
+        let testKeys = await PoolCache.client.keys(`${config.redis_key_prefix}*`);
+        for (let k of testKeys) {
+            await PoolCache.client.del(k)
+        }
         PoolCache.client._c.end(true);
         BlockCache.client._c.end(true);
     });

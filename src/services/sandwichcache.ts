@@ -1,7 +1,8 @@
 import * as redis from 'redis';
-import { Sandwich } from '../core/sandwich';
 import winston from 'winston';
 
+import { Sandwich } from '../core/sandwich';
+import { config } from '../config/config';
 import { RedisClientAsync } from '../redis';
 
 type CachedSandwiches = {
@@ -34,7 +35,7 @@ export class SandwichCache {
         return { fromBlock, toBlock, sandwiches };
     }
     static key(address: string): string {
-        return `sandwiches:${address}`;
+        return `${config.redis_key_prefix}sandwiches:${address}`;
     }
 
     static async del(address: string): Promise<boolean> {

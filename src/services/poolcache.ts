@@ -1,6 +1,7 @@
 import * as redis from 'redis';
 import winston from 'winston';
 
+import { config } from '../config/config';
 import { RedisClientAsync } from '../redis';
 import { Pool } from './pools';
 
@@ -13,7 +14,7 @@ export class PoolCache {
     }
 
     static key(address: string): string {
-        return `pool:${address}`;
+        return `${config.redis_key_prefix}pool:${address}`;
     }
 
     static async lookup(address: string): Promise<Pool | null> {

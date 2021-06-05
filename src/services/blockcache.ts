@@ -1,7 +1,8 @@
 import * as redis from 'redis';
-import { Block } from './blocks';
 import winston from 'winston';
 
+import { Block } from './blocks';
+import { config } from '../config/config';
 import { RedisClientAsync } from '../redis';
 
 export class BlockCache {
@@ -20,7 +21,7 @@ export class BlockCache {
         return JSON.parse(block);
     }
     static key(bn: number): string {
-        return `block:${bn}`;
+        return `${config.redis_key_prefix}block:${bn}`;
     }
 
     static async cache(bn: number, block: Block): Promise<string> {
