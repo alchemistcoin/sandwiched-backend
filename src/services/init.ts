@@ -7,6 +7,7 @@ import { PoolCache } from './poolcache';
 import { PoolService } from './pools';
 import { TokenCache } from './tokencache';
 import { TokenService } from './tokens';
+import { SandwichCache } from './sandwichcache';
 
 export default async function init(
     web3: Web3,
@@ -19,6 +20,8 @@ export default async function init(
 
     PoolCache.init(log, redis);
     PoolService.init(log, web3);
+
+    SandwichCache.init(log, redis);
 
     TokenService.init(log, web3);
     await TokenCache.init(log, redis);

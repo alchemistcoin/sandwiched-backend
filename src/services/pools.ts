@@ -34,7 +34,6 @@ export class PoolService {
             },
         ];
         const contract = new PoolService.web3.eth.Contract(ABI, address);
-        console.log('call factory');
         const factory = await contract.methods.factory().call();
         return {
             '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f': 'UniswapV2',
@@ -78,12 +77,10 @@ export class PoolService {
             },
         ];
         const contract = new PoolService.web3.eth.Contract(ABI, address);
-        console.log('calling tokenservice');
         const [token0, token1] = await Promise.all([
             contract.methods.token0().call().then(TokenService.lookup),
             contract.methods.token1().call().then(TokenService.lookup),
         ]);
-        console.log('done calling tokenservice');
 
         return { address, dex: 'UniswapV2', token0, token1 };
     }

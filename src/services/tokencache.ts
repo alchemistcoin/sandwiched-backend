@@ -1,6 +1,7 @@
 import * as redis from 'redis';
 import winston from 'winston';
 
+import { config } from '../config/config';
 import { tl } from './token-list';
 import { RedisClientAsync } from '../redis';
 
@@ -21,7 +22,7 @@ export class TokenCache {
         TokenCache.client = new RedisClientAsync(logger, redis);
         TokenCache.logger = logger;
         for (const t of tl) {
-            await TokenCache.cache(TokenCache.key(t.address), {
+            await TokenCache.cache(t.address, {
                 address: t.address,
                 name: t.name,
                 symbol: t.symbol,
@@ -31,7 +32,7 @@ export class TokenCache {
     }
 
     static key(address: string): string {
-        return `token:${address}`;
+        return `${config.redis_key_prefix}token:${address}`;
     }
 
     static async lookup(address: string): Promise<Token | null> {

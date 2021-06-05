@@ -1,9 +1,9 @@
 import { agent as request } from 'supertest';
 import { app } from '../src/app';
 import { Sandwich } from '../src/core/sandwich';
+import { config } from '../src/config/config';
 
-import { PoolCache } from '../src/services/poolcache';
-import { BlockCache } from '../src/services/blockcache';
+import { SandwichCache } from '../src/services/sandwichcache';
 
 type message = { [key: string]: string };
 
@@ -24,13 +24,18 @@ function sandwiches(messages: any): Sandwich[] {
 
 describe('sandwiched-wtf API', () => {
     const Oxb1 = '0xb1adceddb2941033a090dd166a462fe1c2029484';
-    function url(block: number) {
-        return `/sandwiches/${Oxb1}?fromBlock=${block}&toBlock=${block + 1}`;
+    function url(fromBlock: number, toBlock = fromBlock + 1) {
+        return `/sandwiches/${Oxb1}?fromBlock=${fromBlock}&toBlock=${toBlock}`;
     }
 
-    afterAll(() => {
-        PoolCache.client._c.end(true);
-        BlockCache.client._c.end(true);
+    afterAll(async () => {
+        const redis = SandwichCache.client;
+        const testKeys = await redis.keys(`${config.redis_key_prefix}*`);
+        for (const k of testKeys) {
+            await redis.del(k);
+        }
+        redis._c.end(true);
+        redis._c.end(true);
     });
     describe('bad requests', () => {
         test('returns 400 for bad address', async () => {
@@ -308,6 +313,33 @@ describe('sandwiched-wtf API', () => {
             const messages = parseResponse(res.text);
             const sws = sandwiches(messages);
             expect(sws.length).toEqual(0);
+        });
+    });
+
+    describe('sandwich-caching', () => {
+        jest.setTimeout(30000);
+        test('caches sandwiches and block ranges', async () => {
+            const block = 12545015;
+            {
+                const res = await request(app).get(url(block)).expect(200);
+                const messages = parseResponse(res.text);
+                const sws = sandwiches(messages);
+                expect(sws.length).toEqual(0);
+                const cached = await SandwichCache.lookup(Oxb1);
+                expect(cached.fromBlock).toEqual(block);
+                expect(cached.toBlock).toEqual(block + 1);
+            }
+            {
+                const res = await request(app)
+                    .get(url(block, block + 10))
+                    .expect(200);
+                const messages = parseResponse(res.text);
+                const sws = sandwiches(messages);
+                expect(sws.length).toEqual(0);
+                const cached = await SandwichCache.lookup(Oxb1);
+                expect(cached.fromBlock).toEqual(block);
+                expect(cached.toBlock).toEqual(block + 10);
+            }
         });
     });
 });
