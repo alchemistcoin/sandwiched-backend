@@ -12,7 +12,7 @@ export class RedisClientAsync {
 
     private get_: (key: string) => Promise<string>;
     private set_: (key: string, value: string) => Promise<string>;
-    private keys_:(pattern: string) => Promise<string[]>;
+    private keys_: (pattern: string) => Promise<string[]>;
     private del_: (key: string) => Promise<number>;
     private flushall_: () => Promise<void>;
 
@@ -44,7 +44,6 @@ export class RedisClientAsync {
 
     public flushall(): Promise<void> {
         return this.flushall_();
-
     }
     public set(key: string, value: string): Promise<string> {
         return this.set_(key, value);

@@ -103,7 +103,10 @@ export async function detect(
         },
     ]);
 
-    if (sandwiches.length + swapsAndTransfers.length == 0) {
+    if (
+        cachedSandwiches === null &&
+        sandwiches.length + swapsAndTransfers.length == 0
+    ) {
         write({
             message: `No uniswapV2 swaps found. (are you sure this address has uniswapV2 trades?)`,
         });
@@ -162,17 +165,18 @@ export async function detect(
             sws.forEach(writeSandwich);
         }
     }
+    SandwichCache.cache(
+        wallet,
+        cachedFromBlock < 0 ? fromBlock : cachedFromBlock,
+        toBlock,
+        sandwiches,
+    );
+
     if (sandwiches.length > 0) {
         write({
             message: `Found ${sandwiches.length} uniswapV2 sandwiches. Yum!`,
             count: sandwiches.length,
         });
-        SandwichCache.cache(
-            wallet,
-            cachedFromBlock < 0 ? fromBlock : cachedFromBlock,
-            toBlock,
-            sandwiches,
-        );
     } else {
         write({ message: `Did not find any uniswapV2 sandwiches.` });
     }
