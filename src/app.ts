@@ -78,10 +78,19 @@ app.get(
         const write = (obj: any) => {
             res.write(jsonLine(obj));
         };
-        const wallet = req.params.wallet;
-        if (!web3.utils.isAddress(wallet)) {
+        let wallet = req.params.wallet;
+        if (!web3.utils.isAddress(wallet) && !wallet.endsWith('.eth')) {
             res.statusCode = 400;
             return next(new Error('bad wallet'));
+        }
+        if (wallet.endsWith('.eth')) {
+            try {
+                wallet = await web3.eth.ens.getAddress(wallet);
+                console.log(`got ${wallet}`);
+            } catch (error) {
+                res.statusCode = 400;
+                return next(new Error('bad wallet'));
+            }
         }
         let fromBlock = 0;
         let toBlock: number;
