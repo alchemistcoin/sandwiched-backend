@@ -41,6 +41,7 @@ describe('sandwiched-wtf API', () => {
         test('returns 400 for bad address', async () => {
             const resp = await request(app).get(`/sandwiches/Ox123456789`);
             expect(resp.status).toEqual(400);
+            expect(resp.type).toEqual('application/json');
         });
 
         test('returns 400 for bad to/from block', async () => {
@@ -48,6 +49,7 @@ describe('sandwiched-wtf API', () => {
                 `/sandwiches/${Oxb1}?fromBlock=foo&toBlock=200`,
             );
             expect(resp.status).toEqual(400);
+            expect(resp.type).toEqual('application/json');
         });
     });
 
