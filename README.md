@@ -1,15 +1,34 @@
-# sandwiched-wtf
+# Backend for sandwiched.wtf 
 
-Finds sandwiches across a wallet's uniswap trade history. (Other exchanges coming soon).
+Finds sandwiches across a wallet's uniswapv2 trade history. (Other exchanges will be added).
+
+### Requirements
+
+1. Node 14 (other versions may work, but this is run/tested on 14).
+1. A redis instance. A quick way to get one for test/dev is via docker:
+
+```
+docker pull redis:alpine
+docker run --name redis -p 6379:6379 -d redis:alpine
+```
 
 
+### Build/test/run
 
-### Setup
+Running the backend requires a redis server to be up.
 
 ```sh
 npm i
-npm run build
+npm run build:watch
+npm run dev
+npm run test
 ```
+
+
+Environment variables: 
+- `REDIS_URL` (default `redis://localhost:6379`)
+- `WEB3_PROVIDER_URI` (no default, required)
+
 
 ### Running from CLI
 
