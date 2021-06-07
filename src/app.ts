@@ -1,5 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
+import cors from 'cors';
 import * as morgan from './config/morgan';
 import * as redis from 'redis';
 import rateLimit from 'express-rate-limit';
@@ -50,9 +51,8 @@ app.use(helmet());
 
 app.use(express.urlencoded({ extended: false }));
 
-// enable cors
-// app.use(cors());
-// app.options('*', cors());
+app.use(cors());
+app.options('*', cors());
 
 app.get('/', function (_req, res) {
     res.send('hello');
