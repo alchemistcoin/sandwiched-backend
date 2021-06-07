@@ -22,6 +22,14 @@ function sandwiches(messages: any): Sandwich[] {
     return messages.filter(isSandwich);
 }
 
+async function flushRedis(): Promise<void> {
+    const redis = SandwichCache.client;
+    const testKeys = await redis.keys(`${config.redis_key_prefix}*`);
+    for (const k of testKeys) {
+        await redis.del(k);
+    }
+}
+
 describe('sandwiched-wtf API', () => {
     const Oxb1 = '0xb1adceddb2941033a090dd166a462fe1c2029484';
     function url(fromBlock: number, toBlock = fromBlock + 1) {
@@ -29,17 +37,21 @@ describe('sandwiched-wtf API', () => {
     }
 
     afterAll(async () => {
+        await flushRedis();
         const redis = SandwichCache.client;
-        const testKeys = await redis.keys(`${config.redis_key_prefix}*`);
-        for (const k of testKeys) {
-            await redis.del(k);
-        }
         redis._c.end(true);
         redis._c.end(true);
     });
     describe('bad requests', () => {
         test('returns 400 for bad address', async () => {
             const resp = await request(app).get(`/sandwiches/Ox123456789`);
+            expect(resp.status).toEqual(400);
+            expect(resp.type).toEqual('application/json');
+        });
+        test('returns 400 for unknown ENS name', async () => {
+            const resp = await request(app).get(
+                `/sandwiches/thereisnosuchaddr.eth`,
+            );
             expect(resp.status).toEqual(400);
             expect(resp.type).toEqual('application/json');
         });
@@ -321,8 +333,10 @@ describe('sandwiched-wtf API', () => {
     describe('sandwich-caching', () => {
         jest.setTimeout(30000);
         test('caches sandwiches and block ranges', async () => {
+            await flushRedis();
             const block = 12545015;
             {
+                // run query and check cache is populated.
                 const res = await request(app).get(url(block)).expect(200);
                 const messages = parseResponse(res.text);
                 const sws = sandwiches(messages);
@@ -332,6 +346,7 @@ describe('sandwiched-wtf API', () => {
                 expect(cached.toBlock).toEqual(block + 1);
             }
             {
+                // run query with wider block range and check cache is populated.
                 const res = await request(app)
                     .get(url(block, block + 10))
                     .expect(200);
@@ -341,6 +356,35 @@ describe('sandwiched-wtf API', () => {
                 const cached = await SandwichCache.lookup(Oxb1);
                 expect(cached.fromBlock).toEqual(block);
                 expect(cached.toBlock).toEqual(block + 10);
+            }
+            {
+                // Run queries on ENS name and on checksum addr and verify that
+                // there is still a single cache entry.
+                let res = await request(app)
+                    .get(
+                        `/sandwiches/0xb1.eth?fromBlock=${block}&toBlock=${
+                            block + 10
+                        }`,
+                    )
+                    .expect(200);
+                let messages = parseResponse(res.text);
+                let sws = sandwiches(messages);
+                expect(sws.length).toEqual(0);
+                res = await request(app)
+                    .get(
+                        `/sandwiches/0xB1AdceddB2941033a090dD166a462fe1c2029484?fromBlock=${block}&toBlock=${
+                            block + 10
+                        }`,
+                    )
+                    .expect(200);
+                messages = parseResponse(res.text);
+                sws = sandwiches(messages);
+                expect(sws.length).toEqual(0);
+
+                const keys = await SandwichCache.client.keys(
+                    `${config.redis_key_prefix}sandwich*`,
+                );
+                expect(keys.length).toEqual(1);
             }
         });
     });

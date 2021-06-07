@@ -22,6 +22,7 @@ export async function detect(
     fromBlock: number,
     toBlock: number,
 ): Promise<void> {
+    wallet = wallet.toLowerCase();
     let cachedFromBlock = -1;
     const writeSandwich = (o: any) => {
         write(o);
