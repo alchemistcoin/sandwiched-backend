@@ -126,7 +126,8 @@ app.use(
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use(((err, _req: express.Request, res: express.Response, _next) => {
     if (res.statusCode !== undefined) {
-        return _next(err);
+        res.json(err.toString());
+        return;
     }
     err.statusCode = 500;
     if (config.env === 'production') {
@@ -135,5 +136,5 @@ app.use(((err, _req: express.Request, res: express.Response, _next) => {
     }
 
     logger.error(err);
-    res.status(500).send(err);
+    res.status(500).json(err);
 }) as express.ErrorRequestHandler);
