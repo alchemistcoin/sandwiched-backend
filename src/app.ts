@@ -134,7 +134,12 @@ app.use(
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use(((err, _req: express.Request, res: express.Response, _next) => {
+    logger.error(err);
     if (res.statusCode !== undefined) {
+        if (res.headersSent) {
+            res.write(err.toString());
+            return;
+        }
         res.json(err.toString());
         return;
     }
@@ -144,6 +149,5 @@ app.use(((err, _req: express.Request, res: express.Response, _next) => {
         err.stack = undefined;
     }
 
-    logger.error(err);
     res.status(500).json(err);
 }) as express.ErrorRequestHandler);

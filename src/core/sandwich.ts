@@ -75,7 +75,7 @@ export interface Sandwich {
     target: SwapInfo;
     close: SwapInfo;
     profit: Profit;
-    profit2: Profit;
+    profit2?: Profit;
     pool: string;
     mev: boolean;
 }
@@ -141,16 +141,19 @@ export async function findSandwich(
             SwapInfoFromLog(target),
             SwapInfoFromLog(close),
         ]);
-        res.push({
+        const sw: Sandwich = {
             message: 'Sandwich found',
             open: openSI,
             target: targetSI,
             close: closeSI,
             profit: profits[0],
-            profit2: profits[1],
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
             mev,
-        });
+        };
+        if (profits[1] != undefined) {
+            sw.profit2 = profits[1];
+        }
+        res.push(sw);
     }
     return res;
 }
@@ -197,10 +200,22 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
                 currency: pool.token0.symbol,
             };
     }
-    if (backward.amount == '0.0') {
-        return [forward];
+    let profits: Profit[] = [];
+    if (forward.amount != '0.0') {
+        profits.push(forward);
     }
-    return [forward, backward];
+    if (backward.amount != '0.0') {
+        profits.push(backward);
+    }
+    if (profits.length == 0) {
+        profits = [
+            {
+                amount: '0.0',
+                currency: 'WETH',
+            },
+        ];
+    }
+    return profits;
 }
 
 function logMultipleClose(

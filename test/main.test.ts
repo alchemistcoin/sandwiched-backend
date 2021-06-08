@@ -275,16 +275,16 @@ describe('sandwiched-wtf API', () => {
             const sws = sandwiches(messages);
             expect(sws.length).toEqual(2);
 
-            expect(sws[0].profit).toEqual({ amount: '0.0', currency: 'ROOK' });
-            expect(sws[0].profit2).toEqual({
+            expect(sws[0].profit).toEqual({
                 amount: '0.197375949528145637',
                 currency: 'WETH',
             });
-            expect(sws[1].profit).toEqual({ amount: '0.0', currency: 'ROOK' });
-            expect(sws[1].profit2).toEqual({
+            expect(sws[0].profit2).toBeUndefined();
+            expect(sws[1].profit).toEqual({
                 amount: '0.167365394662967763',
                 currency: 'WETH',
             });
+            expect(sws[1].profit2).toBeUndefined();
         });
 
         test('finds double sandwich (non-interleaved) and computes profits correctly', async () => {
