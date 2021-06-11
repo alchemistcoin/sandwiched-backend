@@ -16,6 +16,7 @@ function logWeird(log: winston.Logger, msg: string, txs: Array<string>) {
 interface Profit {
     amount: string;
     currency: string;
+    cgId: string;
 }
 
 interface SwapInfo {
@@ -181,11 +182,13 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
             forward = {
                 amount: utils.formatUnits(p, pool.token0.decimals),
                 currency: pool.token0.symbol,
+                cgId: pool.token0.cgId,
             };
             p = open.swap.amount1Out.sub(close.swap.amount1In);
             backward = {
                 amount: utils.formatUnits(p, pool.token1.decimals),
                 currency: pool.token1.symbol,
+                cgId: pool.token1.cgId,
             };
             break;
         case SwapDir.OneToZero:
@@ -193,11 +196,13 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
             forward = {
                 amount: utils.formatUnits(p, pool.token1.decimals),
                 currency: pool.token1.symbol,
+                cgId: pool.token1.cgId,
             };
             p = open.swap.amount0Out.sub(close.swap.amount0In);
             backward = {
                 amount: utils.formatUnits(p, pool.token0.decimals),
                 currency: pool.token0.symbol,
+                cgId: pool.token0.cgId,
             };
     }
     let profits: Profit[] = [];
@@ -212,6 +217,7 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
             {
                 amount: '0.0',
                 currency: 'WETH',
+                cgId: 'weth',
             },
         ];
     }
