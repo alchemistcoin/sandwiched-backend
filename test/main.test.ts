@@ -102,7 +102,11 @@ describe('sandwiched-wtf API', () => {
                     tx:
                         '0x53d2e9170eb2a21330ddbfc5a4e9e02e31de3e76738cd1659946256abcb417f7',
                 },
-                profit: { amount: '1.770266036457971241', currency: 'WETH' },
+                profit: {
+                    amount: '1.770266036457971241',
+                    currency: 'WETH',
+                    cgId: 'weth',
+                },
                 pool: 'WETH - B20',
                 mev: false,
             });
@@ -143,7 +147,11 @@ describe('sandwiched-wtf API', () => {
                     tx:
                         '0x62fedc4df9aebe7cdf7965fe1e35de7d657c94db2c55551c1954eb823a0351b6',
                 },
-                profit: { amount: '14.320954423950744728', currency: 'WETH' },
+                profit: {
+                    amount: '14.320954423950744728',
+                    currency: 'WETH',
+                    cgId: 'weth',
+                },
                 pool: 'FARM - WETH',
                 mev: false,
             });
@@ -184,7 +192,11 @@ describe('sandwiched-wtf API', () => {
                     tx:
                         '0x5a54f6726c168aedf1171ce686dd5d05d03bb99de212e30d5da05ea316bdec64',
                 },
-                profit: { amount: '1.026020662373103583', currency: 'ibETH' },
+                profit: {
+                    amount: '1.026020662373103583',
+                    currency: 'ibETH',
+                    cgId: 'interest-bearing-eth',
+                },
                 pool: 'ibETH - ALPHA',
                 mev: false,
             });
@@ -225,13 +237,18 @@ describe('sandwiched-wtf API', () => {
                     tx:
                         '0xfcf39b2ac09995aa8cbe8075f5cdbf6d6f37043d5c6f1955966c2d63ae43852f',
                 },
-                profit: { amount: '2599.826136379271345974', currency: 'GYSR' },
+                profit: {
+                    amount: '2599.826136379271345974',
+                    currency: 'GYSR',
+                    cgId: 'geyser',
+                },
                 // By happenstance this one has a backward profit as well as a
                 // forward profit. This wasn't explicitly the purpose of this test
                 // and was discovered after backward profit was added.
                 profit2: {
                     amount: '0.039801656813635224',
                     currency: 'WETH',
+                    cgId: 'weth',
                 },
                 pool: 'GYSR - WETH',
                 mev: false,
@@ -278,11 +295,13 @@ describe('sandwiched-wtf API', () => {
             expect(sws[0].profit).toEqual({
                 amount: '0.197375949528145637',
                 currency: 'WETH',
+                cgId: 'weth',
             });
             expect(sws[0].profit2).toBeUndefined();
             expect(sws[1].profit).toEqual({
                 amount: '0.167365394662967763',
                 currency: 'WETH',
+                cgId: 'weth',
             });
             expect(sws[1].profit2).toBeUndefined();
         });
@@ -296,10 +315,12 @@ describe('sandwiched-wtf API', () => {
             expect(sws[0].profit).toEqual({
                 amount: '0.128048512336962075',
                 currency: 'WETH',
+                cgId: 'weth',
             });
             expect(sws[1].profit).toEqual({
                 amount: '1.21808712279187822',
                 currency: 'WETH',
+                cgId: 'weth',
             });
         });
 

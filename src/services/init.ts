@@ -23,6 +23,6 @@ export default async function init(
 
     SandwichCache.init(log, redis);
 
-    TokenService.init(log, web3);
-    await TokenCache.init(log, redis);
+    TokenCache.init(log, redis);
+    await TokenService.init(log, web3);
 }

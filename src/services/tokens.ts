@@ -3,6 +3,8 @@ import * as utils from 'web3-utils';
 import winston from 'winston';
 import _ from 'lodash';
 
+import { tl } from './token-list';
+import { coingecko } from './coinlist';
 import { TokenCache } from './tokencache';
 
 const detailedERC20ABI: utils.AbiItem[] = [
@@ -61,15 +63,31 @@ export type Token = {
     readonly symbol: string;
     readonly name: string;
     readonly decimals: number;
+    readonly cgId: string;
 };
 
 export class TokenService {
     static web3: Web3;
     static logger: winston.Logger;
     static ABI: utils.AbiItem[];
-    static init(logger: winston.Logger, web3: Web3): void {
+    static cgmap: { [key: string]: string } = {};
+    static async init(logger: winston.Logger, web3: Web3): Promise<void> {
         TokenService.web3 = web3;
         TokenService.logger = logger;
+
+        coingecko.forEach((coin) => {
+            TokenService.cgmap[coin.addr.toLowerCase()] = coin.id;
+        });
+
+        for (const t of tl) {
+            await TokenCache.cache(t.address, {
+                address: t.address,
+                name: t.name,
+                symbol: t.symbol,
+                decimals: t.decimals,
+                cgId: TokenService.cgmap[t.address.toLowerCase()] || 'unknown',
+            });
+        }
     }
 
     static async fetch(address: string): Promise<Token> {
@@ -110,7 +128,13 @@ export class TokenService {
             throw new Error(`token invalid decimals ${decimals}`);
         }
 
-        return { address, name, symbol, decimals: parseInt(decimals) };
+        return {
+            address,
+            name,
+            symbol,
+            decimals: parseInt(decimals),
+            cgId: TokenService.cgmap[address.toLowerCase()] || 'unknown',
+        };
     }
 
     static async lookup(address: string): Promise<Token> {
@@ -129,6 +153,7 @@ export class TokenService {
                 name: 'unknown',
                 symbol: 'unknown',
                 decimals: 18,
+                cgId: 'unknown',
             };
         }
     }

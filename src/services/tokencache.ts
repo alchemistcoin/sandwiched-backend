@@ -2,33 +2,15 @@ import * as redis from 'redis';
 import winston from 'winston';
 
 import { config } from '../config/config';
-import { tl } from './token-list';
 import { RedisClientAsync } from '../redis';
-
-type Token = {
-    readonly address: string;
-    readonly symbol: string;
-    readonly name: string;
-    readonly decimals: number;
-};
+import { Token } from './tokens';
 
 export class TokenCache {
     static client: RedisClientAsync;
     static logger: winston.Logger;
-    static async init(
-        logger: winston.Logger,
-        redis: redis.RedisClient,
-    ): Promise<void> {
+    static init(logger: winston.Logger, redis: redis.RedisClient): void {
         TokenCache.client = new RedisClientAsync(logger, redis);
         TokenCache.logger = logger;
-        for (const t of tl) {
-            await TokenCache.cache(t.address, {
-                address: t.address,
-                name: t.name,
-                symbol: t.symbol,
-                decimals: t.decimals,
-            });
-        }
     }
 
     static key(address: string): string {
@@ -46,6 +28,7 @@ export class TokenCache {
             address: token.address,
             symbol: token.symbol,
             name: token.name,
+            cgId: token.cgId,
         };
     }
     static async cache(address: string, tok: Token): Promise<string> {
