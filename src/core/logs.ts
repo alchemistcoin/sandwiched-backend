@@ -34,6 +34,7 @@ export async function getLogs(
     toBlock: blocknumber.T,
     address: string,
     topics: string[],
+    depth = 4,
 ): Promise<Log[]> {
     if (!blocknumber.isValid(fromBlock)) {
         throw `invalid fromBlock ${fromBlock}`;
@@ -51,6 +52,9 @@ export async function getLogs(
                 toBlock,
             });
         } catch (error) {
+            if (depth == 0) {
+                return [];
+            }
             if (!sizeExceeded(error)) {
                 log.error(error);
                 return [];
@@ -59,22 +63,26 @@ export async function getLogs(
                 (blocknumber.toNumber(fromBlock) +
                     blocknumber.toNumber(toBlock)) >>
                 1;
-            const arr1 = await getLogs(
-                web3,
-                log,
-                fromBlock,
-                midBlock,
-                address,
-                topics,
-            );
-            const arr2 = await getLogs(
-                web3,
-                log,
-                midBlock + 1,
-                toBlock,
-                address,
-                topics,
-            );
+            const arr2 =
+                (await getLogs(
+                    web3,
+                    log,
+                    midBlock + 1,
+                    toBlock,
+                    address,
+                    topics,
+                    depth - 1,
+                )) || [];
+            const arr1 =
+                (await getLogs(
+                    web3,
+                    log,
+                    fromBlock,
+                    midBlock,
+                    address,
+                    topics,
+                    depth - 1,
+                )) || [];
             return [...arr1, ...arr2];
         }
     }
