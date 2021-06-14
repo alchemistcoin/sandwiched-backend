@@ -20,8 +20,25 @@ for (const item in config) {
 }
 
 (async () => {
+    const redisOptions: {
+        tls?: {
+            rejectUnauthorized: boolean;
+            requestCert: boolean;
+        };
+    } = {};
+
+    if (config.redis_url.includes('rediss://'))
+        redisOptions.tls = {
+            rejectUnauthorized: false,
+            requestCert: true,
+        };
+
     try {
-        await init(web3, logger, redis.createClient(config.redis_url));
+        await init(
+            web3,
+            logger,
+            redis.createClient(config.redis_url, redisOptions),
+        );
     } catch (e) {
         logger.error('calling init', e);
     }
