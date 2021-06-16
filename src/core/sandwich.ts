@@ -125,6 +125,10 @@ export async function findSandwich(
         }
 
         const close = closes[0];
+        if (checkMismatched(open, close)) {
+            continue;
+        }
+
         const pool = await PoolService.lookup(open.address);
         if (pool === null) {
             throw new Error('null pool');
@@ -222,6 +226,31 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
         ];
     }
     return profits;
+}
+
+function areClose(a: BigNumber, b: BigNumber): boolean {
+    return b.lt(a.mul(98).div(102)) || b.gt(a.mul(102).div(98));
+}
+
+function checkMismatched(open: SwapLog, close: SwapLog): boolean {
+    let a: BigNumber, b: BigNumber, c: BigNumber, d: BigNumber;
+    if (open.swap.dir == SwapDir.ZeroToOne) {
+        a = open.swap.amount1Out;
+        b = close.swap.amount1In;
+        c = close.swap.amount0Out;
+        d = open.swap.amount0In;
+    } else {
+        a = open.swap.amount0Out;
+        b = close.swap.amount0In;
+        c = close.swap.amount1Out;
+        d = open.swap.amount1In;
+    }
+    console.log(a.toString(), b.toString());
+    console.log(c.toString(), d.toString());
+    if (areClose(a, b) && areClose(c, d)) {
+        return true;
+    }
+    return false;
 }
 
 function logMultipleClose(
