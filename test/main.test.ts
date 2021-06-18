@@ -396,6 +396,28 @@ describe('sandwiched-wtf API', () => {
             const sws = sandwiches(messages);
             expect(sws.length).toEqual(0);
         });
+        test('avoids mis-detections on multi-swap sandwiches (bug #60 workaround)', async () => {
+            const wallet = '0x93f5af632ce523286e033f0510e9b3c9710f4489';
+            const block = 11003961;
+            const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
+                block + 1
+            }`;
+            const res = await request(app).get(url).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(0);
+        });
+        test('avoids mis-detections on multi-swap sandwiches (bug #60 workaround test 2)', async () => {
+            const wallet = '0x5a9bd3e84376d2961d64e7088d0aa60cab148100';
+            const block = 11908046;
+            const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
+                block + 1
+            }`;
+            const res = await request(app).get(url).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(0);
+        });
     });
 
     describe('sandwich-caching', () => {

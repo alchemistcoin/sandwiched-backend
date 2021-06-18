@@ -134,6 +134,15 @@ export async function findSandwich(
             throw new Error('null pool');
         }
         const profits = computeProfits(open, close, pool);
+        const [openSI, targetSI, closeSI] = await Promise.all([
+            SwapInfoFromLog(open),
+            SwapInfoFromLog(target),
+            SwapInfoFromLog(close),
+        ]);
+
+        if (checkProfitTooBig(targetSI, profits)) {
+            continue;
+        }
         let mev = false;
         if (target.transactionIndex <= bundle_limit) {
             const tx = await web3.eth.getTransaction(open.transactionHash);
@@ -141,11 +150,6 @@ export async function findSandwich(
                 mev = true;
             }
         }
-        const [openSI, targetSI, closeSI] = await Promise.all([
-            SwapInfoFromLog(open),
-            SwapInfoFromLog(target),
-            SwapInfoFromLog(close),
-        ]);
         const sw: Sandwich = {
             message: 'Sandwich found',
             open: openSI,
@@ -230,6 +234,24 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
 
 function areClose(a: BigNumber, b: BigNumber): boolean {
     return b.lt(a.mul(96).div(100)) || b.gt(a.mul(104).div(100));
+}
+
+// This is a heuristic workaround to discard (at least some) instances of
+// sandwiches that have an enlarged profit due to wrapping multiple transactions.
+// The 0.5 multiplier is quite arbitrary.
+// This can all go away when we move to doing full chain scans.
+function checkProfitTooBig(swap: SwapInfo, profits: Profit[]): boolean {
+    for (const profit of profits) {
+        const pn = parseFloat(profit.amount);
+        const swapn =
+            profit.currency == swap.currencyIn
+                ? parseFloat(swap.amountIn)
+                : parseFloat(swap.amountOut);
+        if (pn > swapn / 2) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function checkMismatched(open: SwapLog, close: SwapLog): boolean {
