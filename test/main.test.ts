@@ -262,6 +262,18 @@ describe('sandwiched-wtf API', () => {
             const sws = sandwiches(messages);
             expect(sws.length).toEqual(1);
         });
+        test('finds sandwiches on multi-swap user trades that start with a token (issue #57, dupe supression bug)', async () => {
+            const block = 12652604;
+            const wallet = '0xb5e69e66ca38fcd10b3a5d682285a2c0561689bc';
+            const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
+                block + 1
+            }`;
+
+            const res = await request(app).get(url).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(1);
+        });
 
         test('sets mev flag on bundle sandwich', async () => {
             const block = 12205788;
