@@ -363,7 +363,6 @@ describe('sandwiched-wtf API', () => {
         });
 
         test('avoids mis-detection based on mismatched amounts (bug #51 fix)', async () => {
-            // bug fix https://github.com/alchemistcoin/sandwiched-backend/issues/10
             const wallet = '0x2993e1d02b11377f44455aedc618c705acbb0591';
             const block = 11862214;
             const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
@@ -376,7 +375,6 @@ describe('sandwiched-wtf API', () => {
             // without the fix, we got a second incorrect sandwich
         });
         test('avoids mis-detection based on mismatched amounts (bug #51 fix 2)', async () => {
-            // bug fix https://github.com/alchemistcoin/sandwiched-backend/issues/10
             const wallet = '0x5d4377C603d5B677d797Cb025e777e9b6B106EF0';
             const block = 11699126;
             const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
@@ -388,9 +386,30 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(0);
         });
         test('avoids mis-detection based on mismatched amounts (bug #51 fix 3)', async () => {
-            // bug fix https://github.com/alchemistcoin/sandwiched-backend/issues/10
             const wallet = '0xebdb626c95a25f4e304336b1adcad0521a1bdca1';
             const block = 11520420;
+            const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
+                block + 1
+            }`;
+            const res = await request(app).get(url).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(0);
+        });
+        test('avoids mis-detections on multi-swap sandwiches (bug #60 workaround)', async () => {
+            const wallet = '0x93f5af632ce523286e033f0510e9b3c9710f4489';
+            const block = 11003961;
+            const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
+                block + 1
+            }`;
+            const res = await request(app).get(url).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(0);
+        });
+        test('avoids mis-detections on multi-swap sandwiches (bug #60 workaround test 2)', async () => {
+            const wallet = '0x5a9bd3e84376d2961d64e7088d0aa60cab148100';
+            const block = 11908046;
             const url = `/sandwiches/${wallet}?fromBlock=${block}&toBlock=${
                 block + 1
             }`;
