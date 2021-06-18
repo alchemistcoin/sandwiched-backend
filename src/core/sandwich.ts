@@ -245,8 +245,6 @@ function checkMismatched(open: SwapLog, close: SwapLog): boolean {
         c = close.swap.amount1Out;
         d = open.swap.amount1In;
     }
-    console.log(a.toString(), b.toString());
-    console.log(c.toString(), d.toString());
     if (areClose(a, b) && areClose(c, d)) {
         return true;
     }
