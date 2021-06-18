@@ -229,7 +229,7 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
 }
 
 function areClose(a: BigNumber, b: BigNumber): boolean {
-    return b.lt(a.mul(98).div(102)) || b.gt(a.mul(102).div(98));
+    return b.lt(a.mul(96).div(100)) || b.gt(a.mul(104).div(100));
 }
 
 function checkMismatched(open: SwapLog, close: SwapLog): boolean {
