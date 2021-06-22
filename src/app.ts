@@ -52,12 +52,24 @@ if (config.env !== 'test') {
 // https://expressjs.com/en/guide/behind-proxies.html
 app.enable('trust proxy');
 
+function rateBypass(req) {
+    if (config.rate_bypass === undefined) {
+        return false;
+    }
+    return req.query.rateBypass === config.rate_bypass;
+}
+
 const reqsPerInterval = config.env === 'test' ? 100 : 6;
 app.use(
     rateLimit({
         windowMs: 1 * 60 * 1000, // 1 minute
         headers: false,
-        max: reqsPerInterval,
+        max: function (req) {
+            if (rateBypass(req)) {
+                return 0;
+            }
+            return reqsPerInterval;
+        },
         onLimitReached: function (req: express.Request) {
             logger.warn(`Limit reached for ${req.ip}`);
         },
