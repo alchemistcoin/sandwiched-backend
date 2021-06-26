@@ -1,0 +1,23 @@
+# Specify docker-compose version.
+version: '3'
+
+# Define the services/containers to be run.
+services:
+  backend:
+    build: .
+    container_name: api
+    ports:
+      - '3000:3000'
+    depends_on:
+      - redis
+    links:
+      - redis
+    environment:
+      - REDIS_URL=redis://cache
+      - WEB3_PROVIDER_URI=${WEB3_PROVIDER_URI}
+
+  redis:
+    image: redis:4
+    container_name: cache
+    ports:
+      - '6379:6379'
