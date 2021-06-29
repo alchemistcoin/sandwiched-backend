@@ -108,6 +108,7 @@ describe('sandwiched-wtf API', () => {
                     cgId: 'weth',
                 },
                 pool: 'WETH - B20',
+                dex: 'UniswapV2',
                 mev: false,
             });
         });
@@ -153,6 +154,7 @@ describe('sandwiched-wtf API', () => {
                     cgId: 'weth',
                 },
                 pool: 'FARM - WETH',
+                dex: 'UniswapV2',
                 mev: false,
             });
         });
@@ -198,6 +200,7 @@ describe('sandwiched-wtf API', () => {
                     cgId: 'interest-bearing-eth',
                 },
                 pool: 'ibETH - ALPHA',
+                dex: 'UniswapV2',
                 mev: false,
             });
         });
@@ -251,8 +254,18 @@ describe('sandwiched-wtf API', () => {
                     cgId: 'weth',
                 },
                 pool: 'GYSR - WETH',
+                dex: 'UniswapV2',
                 mev: false,
             });
+        });
+
+        test('finds sushiswap sandwich', async () => {
+            const block = 12128420;
+            const res = await request(app).get(url(block)).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(1);
+            expect(sws[0].dex).toEqual('SushiSwapV2');
         });
 
         test('does not return dupes for sandwiches that are found both via Swap and Transfer', async () => {

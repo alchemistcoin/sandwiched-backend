@@ -33,7 +33,7 @@ export async function getLogs(
     fromBlock: blocknumber.T,
     toBlock: blocknumber.T,
     address: string,
-    topics: string[],
+    topics: Array<string | string[] | null>,
     depth = 4,
 ): Promise<Log[]> {
     if (!blocknumber.isValid(fromBlock)) {

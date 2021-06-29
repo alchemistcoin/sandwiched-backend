@@ -107,14 +107,18 @@ export async function getSwaps(
     web3: Web3,
     log: winston.Logger,
     pool: string = null,
-    router: string = null,
+    routers: string[] = null,
     wallet: string = null,
     fromBlock = 0,
     toBlock = 99999999,
 ): Promise<SwapLog[]> {
     const topics = [
         ABIs.Binary.Swap, // or with ethers: utils.id('Swap(address,uint256,uint256,uint256,uint256,address)')
-        router ? web3.eth.abi.encodeParameter('address', router) : null,
+        routers
+            ? routers.map((router) =>
+                  web3.eth.abi.encodeParameter('address', router),
+              )
+            : null,
         wallet ? web3.eth.abi.encodeParameter('address', wallet) : null,
     ];
 

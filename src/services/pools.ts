@@ -5,7 +5,7 @@ import winston from 'winston';
 import { Token, TokenService } from './tokens';
 import { PoolCache } from './poolcache';
 
-type Exchange = 'UniswapV2';
+type Exchange = 'UniswapV2' | 'SushiSwapV2';
 
 export type Pool = {
     readonly address: string;
@@ -37,15 +37,16 @@ export class PoolService {
         const factory = await contract.methods.factory().call();
         return {
             '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f': 'UniswapV2',
+            '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac': 'SushiSwapV2',
         }[factory];
     }
 
     static async fetch(address: string): Promise<Pool> {
         PoolService.logger.debug(`PoolService.fetch: ${address}`);
-        if ((await PoolService.poolType(address)) === undefined) {
+        const dex = await PoolService.poolType(address);
+        if (dex === undefined) {
             throw new Error(`unknown pool type for address ${address}`);
         }
-        // only Uniswapv2 for now.
         const ABI: utils.AbiItem[] = [
             {
                 constant: true,
@@ -82,7 +83,7 @@ export class PoolService {
             contract.methods.token1().call().then(TokenService.lookup),
         ]);
 
-        return { address, dex: 'UniswapV2', token0, token1 };
+        return { address, dex, token0, token1 };
     }
 
     static async has(address: string): Promise<boolean> {

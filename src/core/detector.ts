@@ -8,7 +8,7 @@ import { getTransfers, TransferLog } from './transfers';
 import { Sandwich, findSandwich } from './sandwich';
 import { PoolService } from '../services/pools';
 import { SandwichCache } from '../services/sandwichcache';
-import { uniswapPairs } from './uniswap-pair-list';
+import { uniswapPairs, sushiswapPairs } from './pair-lists';
 import * as ABIs from './abis';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,7 +57,7 @@ export async function detect(
         web3,
         logger,
         null, // all pools
-        addresses.uniswapV2Router,
+        [addresses.uniswapV2Router, addresses.sushiswapV2Router],
         wallet,
         fromBlock,
         toBlock,
@@ -127,12 +127,16 @@ export async function detect(
         const transfer = log as TransferLog;
         let swaps: SwapLog[] = [];
         if (isTransfer(log)) {
-            // see if this transfer is to a known uniswap pool, which would
-            // be a strong hint that this is a swap. This is an optimization
-            // to avoid calling getTransactionreceipt on every transfer we find.
+            // see if this transfer is to a known uniswap/sushiswap
+            // pool, which would be a strong hint that this is a
+            // swap. This is an optimization to avoid calling
+            // getTransactionreceipt on every transfer we find, at the
+            // cost of possibly missing sandwiches on extremely
+            // obscure/low-volume pools.
             const maybePool = transfer.transfer.to.toLowerCase();
             if (
                 !uniswapPairs.includes(maybePool) &&
+                !sushiswapPairs.includes(maybePool) &&
                 !(await PoolService.has(maybePool))
             ) {
                 continue;
