@@ -274,6 +274,13 @@ describe('sandwiched-wtf API', () => {
             const sws = sandwiches(messages);
             expect(sws.length).toEqual(1);
         });
+        test('does not return dupes for sandwiches that are found both via Swap and Transfer (SwapExactTokensForTokens, bug #69)', async () => {
+            const block = 11422145;
+            const res = await request(app).get(url(block)).expect(200);
+            const messages = parseResponse(res.text);
+            const sws = sandwiches(messages);
+            expect(sws.length).toEqual(1);
+        });
 
         test('sets mev flag on bundle sandwich', async () => {
             const block = 12205788;
