@@ -77,6 +77,7 @@ export interface Sandwich {
     close: SwapInfo;
     profit: Profit;
     profit2?: Profit;
+    dex: string;
     pool: string;
     mev: boolean;
 }
@@ -157,6 +158,7 @@ export async function findSandwich(
             close: closeSI,
             profit: profits[0],
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
+            dex: pool.dex,
             mev,
         };
         if (profits[1] != undefined) {

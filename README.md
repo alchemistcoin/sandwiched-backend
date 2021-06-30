@@ -1,6 +1,6 @@
 # Backend for sandwiched.wtf 
 
-Finds sandwiches across a wallet's uniswapv2 trade history. (Other exchanges will be added).
+Finds sandwiches across a wallet's trade history on SushiSwap and UniSwapV2.
 
 ### Requirements
 
