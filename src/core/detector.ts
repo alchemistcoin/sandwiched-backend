@@ -123,7 +123,6 @@ export async function detect(
     const isTransfer = (o: SwapLog | TransferLog): boolean => 'transfer' in o;
 
     const seen = {};
-    const seenTransfers = {};
     for (const log of swapsAndTransfers) {
         const transfer = log as TransferLog;
         let swaps: SwapLog[] = [];
@@ -145,7 +144,6 @@ export async function detect(
                 if (log.topics.length && log.topics[0] == ABIs.Binary.Swap) {
                     const swap = decodeSwapLog(web3, log);
                     swaps.push(swap);
-                    seenTransfers[swap.transactionHash] = 1;
                 }
             }
         } else {
@@ -155,14 +153,8 @@ export async function detect(
             // we need to check and filter out dupes because the Transfers
             // path can flag swaps that we also end up finding
             // directly in the Swap path.
-            if (
-                seenTransfers[swap.transactionHash] &&
-                seen[swap.transactionHash] !== undefined
-            ) {
+            if (seen[swap.transactionHash]) {
                 continue;
-            }
-            if (seenTransfers[swap.transactionHash]) {
-                seen[swap.transactionHash] = 1;
             }
             let sws: Sandwich[];
             try {
@@ -171,6 +163,7 @@ export async function detect(
                 logger.error(e);
                 continue;
             }
+            if (sws.length) seen[swap.transactionHash] = 1;
             sws.forEach(writeSandwich);
         }
     }
