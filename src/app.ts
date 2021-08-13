@@ -8,7 +8,7 @@ import Web3 from 'web3';
 
 import { config } from './config/config';
 import { logger } from './config/logger';
-import { detect } from './core/detector';
+import { detect, detectTransaction } from './core/detector';
 import init from './services/init';
 
 export const app: express.Application = express();
@@ -145,6 +145,25 @@ app.get(
         res.set('Content-Type', 'application/x-ndjson');
         write({ message: 'Fetching transactions...' });
         await detect(web3, logger, write, wallet, fromBlock, toBlock);
+
+        res.end();
+    }),
+);
+
+app.get(
+    '/transaction/:tx',
+    catchAsync(async function (req, res, next): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const write = (obj: any) => {
+            res.write(jsonLine(obj));
+        };
+        const tx = req.params.tx;
+        if (!web3.utils.isHexStrict(tx)) {
+            res.statusCode = 400;
+            return next(new Error('bad transaction'));
+        }
+
+        await detectTransaction(web3, logger, write, tx);
 
         res.end();
     }),

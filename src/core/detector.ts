@@ -13,6 +13,39 @@ import * as ABIs from './abis';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type messageWriter = (o: any) => void;
+const searchWindow = 10; // block range to search for sandwich close
+
+export async function detectTransaction(
+    web3: Web3,
+    logger: winston.Logger,
+    write: messageWriter,
+    tx: string,
+): Promise<void> {
+    const receipt = await web3.eth.getTransactionReceipt(tx);
+    let swap: SwapLog;
+    for (const log of receipt.logs) {
+        if (log.topics.length && log.topics[0] == ABIs.Binary.Swap) {
+            swap = decodeSwapLog(web3, log);
+            break;
+        }
+    }
+    if (swap == null) {
+        write({ message: 'Error: transaction was not a swap?' });
+        return;
+    }
+    let sws: Sandwich[];
+    try {
+        sws = await findSandwich(web3, logger, swap, searchWindow);
+    } catch (e) {
+        logger.error(e);
+        return;
+    }
+    if (sws.length > 0) {
+        sws.forEach(write);
+    } else {
+        write({ message: 'No sandwich found' });
+    }
+}
 
 export async function detect(
     web3: Web3,
@@ -52,7 +85,6 @@ export async function detect(
             writeSandwich(sw);
         }
     }
-    const window = 10;
     const swapsP = getSwaps(
         web3,
         logger,
@@ -162,7 +194,7 @@ export async function detect(
             }
             let sws: Sandwich[];
             try {
-                sws = await findSandwich(web3, logger, swap, window);
+                sws = await findSandwich(web3, logger, swap, searchWindow);
             } catch (e) {
                 logger.error(e);
                 continue;
