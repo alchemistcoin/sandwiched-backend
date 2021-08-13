@@ -65,6 +65,47 @@ describe('sandwiched-wtf API', () => {
         });
     });
 
+    describe('/transactions endpoint', () => {
+        function txurl(tx: string) {
+            return `/transaction/${tx}`;
+        }
+        test('finds sandwich around SwapExactETHforTokens (WETH is token0)', async () => {
+            const res = await request(app)
+                .get(
+                    txurl(
+                        '0x3f889547e6dc2e57dbdc56d9d9995b26210e03e81ebef49d84f6b957595c0315',
+                    ),
+                )
+                .expect(200);
+            const parsed = JSON.parse(res.text);
+            expect(parsed.message).toEqual('Sandwich found');
+        });
+        jest.setTimeout(30000);
+
+        test('finds sandwich around SwapExactETHforTokens (WETH is token1)', async () => {
+            const res = await request(app)
+                .get(
+                    txurl(
+                        '0x04c1466fe094312f6406c276d4bcebf4a075f8e04bd02dc260b92d9a13be2e59',
+                    ),
+                )
+                .expect(200);
+            const parsed = JSON.parse(res.text);
+            expect(parsed.message).toEqual('Sandwich found');
+        });
+
+        test('reports "no sandwich found" for non-sandwiched transaction', async () => {
+            const res = await request(app)
+                .get(
+                    txurl(
+                        '0x05cf57cf65ea19451931b52e2f067ffdc082036ef982d4d4d0c928ed4194eb40',
+                    ),
+                )
+                .expect(200);
+            const parsed = JSON.parse(res.text);
+            expect(parsed.message).toEqual('No sandwich found');
+        });
+    });
     describe('sandwich-finding', () => {
         jest.setTimeout(30000);
         test('finds sandwich around SwapExactETHforTokens (WETH is token0)', async () => {
