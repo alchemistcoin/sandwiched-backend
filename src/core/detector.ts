@@ -22,6 +22,10 @@ export async function detectTransaction(
     tx: string,
 ): Promise<void> {
     const receipt = await web3.eth.getTransactionReceipt(tx);
+    if (receipt == null) {
+        write({ message: `invalid tx: ${tx}` });
+        return;
+    }
     let swap: SwapLog;
     for (const log of receipt.logs) {
         if (log.topics.length && log.topics[0] == ABIs.Binary.Swap) {
