@@ -154,12 +154,12 @@ app.get(
 app.post(
     '/transactions',
     catchAsync(async function (req, res, _next): Promise<void> {
-        const txs = req.body.data
-        const txsRes = {}
+        const txs = req.body.data;
+        const txsRes = {};
         for (const tx of txs) {
             const write = (obj: any) => {
-                if (!txsRes[tx]) txsRes[tx] = []
-                txsRes[tx].push(obj)
+                if (!txsRes[tx]) txsRes[tx] = [];
+                txsRes[tx].push(obj);
             };
             if (web3.utils.isHexStrict(tx)) {
                 await detectTransaction(web3, logger, write, tx);
