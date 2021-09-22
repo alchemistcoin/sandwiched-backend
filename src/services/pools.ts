@@ -35,8 +35,10 @@ export class PoolService {
         ];
         const contract = new PoolService.web3.eth.Contract(ABI, address);
         const factory = await contract.methods.factory().call();
+        console.log('factory', factory)
         return {
             '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f': 'UniswapV2',
+            '0x1F98431c8aD98523631AE4a59f267346ea31F984': 'UniswapV3',
             '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac': 'SushiSwapV2',
         }[factory];
     }

@@ -2,7 +2,7 @@ import Web3 from 'web3';
 import winston from 'winston';
 import { utils, BigNumber } from 'ethers';
 
-import { getSwaps, SwapLog, SwapDir } from './swaps';
+import { getSwaps, SwapLog, SwapDir, getV3Swaps } from './swaps';
 import { Pool, PoolService } from '../services/pools';
 import { BlockService } from '../services/blocks';
 
@@ -70,6 +70,47 @@ async function SwapInfoFromLog(log: SwapLog): Promise<SwapInfo> {
     };
 }
 
+async function SwapV3InfoFromLog(log: SwapLog): Promise<SwapInfo> {
+    const pool = await PoolService.lookup(log.address);
+    if (pool === null) {
+        throw new Error('null pool');
+    }
+
+    const block = await BlockService.lookup(log.blockNumber);
+    const ts =
+        typeof block.timestamp === 'string'
+            ? block.timestamp
+            : new Date(block.timestamp * 1000).toUTCString();
+    const [amountIn, currencyIn] = log.swapV3.amount0.lt(log.swapV3.amount1)
+        ? [
+              utils.formatUnits(log.swapV3.amount1, pool.token1.decimals),
+              pool.token1.symbol,
+          ]
+        : [
+              utils.formatUnits(log.swapV3.amount0, pool.token0.decimals),
+              pool.token0.symbol,
+          ];
+
+    const [amountOut, currencyOut] = log.swapV3.amount0.gt(log.swapV3.amount1)
+        ? [
+              utils.formatUnits(log.swapV3.amount1.mul('-1'), pool.token1.decimals),
+              pool.token1.symbol,
+          ]
+        : [
+              utils.formatUnits(log.swapV3.amount0.mul('-1'), pool.token0.decimals),
+              pool.token0.symbol,
+          ];
+
+    return {
+        tx: log.transactionHash,
+        ts,
+        amountIn,
+        currencyIn,
+        amountOut,
+        currencyOut,
+    };
+}
+
 export interface Sandwich {
     message: string;
     open: SwapInfo;
@@ -83,6 +124,92 @@ export interface Sandwich {
 }
 
 const bundle_limit = 5;
+
+export async function findV3Sandwich(
+    web3: Web3,
+    log: winston.Logger,
+    target: SwapLog,
+    window = 10,
+): Promise<Sandwich[]> {
+    const swaps = await getV3Swaps(
+        web3,
+        log,
+        target.address,
+        null,
+        null,
+        target.blockNumber,
+        target.blockNumber + window,
+    );
+    const res: Sandwich[] = [];
+    const openCandidates = swaps.filter((cand) => {
+        return (
+            cand.swapV3.dir == target.swapV3.dir &&
+            cand.blockNumber == target.blockNumber &&
+            cand.transactionIndex < target.transactionIndex
+        );
+    });
+    for (const open of openCandidates) {
+        const closes = swaps.filter((cand) => {
+            return (
+                cand.swapV3.dir != open.swapV3.dir &&
+                cand.swapV3.recipient == open.swapV3.recipient &&
+                (cand.blockNumber > target.blockNumber ||
+                    cand.transactionIndex > target.transactionIndex)
+            );
+        });
+        if (closes.length == 0) {
+            // not a sandwich open
+            continue;
+        }
+        if (closes.length > 1) {
+            logMultipleClose(log, open, target, closes);
+            continue;
+        }
+
+        const close = closes[0];
+        if (checkMismatchedV3(open, close)) {
+            continue;
+        }
+
+        const pool = await PoolService.lookup(open.address);
+        if (pool === null) {
+            throw new Error('null pool');
+        }
+        const profits = computeProfitsV3(open, close, pool);
+        const [openSI, targetSI, closeSI] = await Promise.all([
+            SwapV3InfoFromLog(open),
+            SwapV3InfoFromLog(target),
+            SwapV3InfoFromLog(close),
+        ]);
+
+        if (checkProfitTooBig(targetSI, profits)) {
+            console.log('profit too big', profits)
+            continue;
+        }
+        let mev = false;
+        if (target.transactionIndex <= bundle_limit) {
+            const tx = await web3.eth.getTransaction(open.transactionHash);
+            if (parseInt(tx.gasPrice) == 0) {
+                mev = true;
+            }
+        }
+        const sw: Sandwich = {
+            message: 'Sandwich found',
+            open: openSI,
+            target: targetSI,
+            close: closeSI,
+            profit: profits[0],
+            pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
+            dex: pool.dex,
+            mev,
+        };
+        if (profits[1] != undefined) {
+            sw.profit2 = profits[1];
+        }
+        res.push(sw);
+    }
+    return res;
+}
 
 export async function findSandwich(
     web3: Web3,
@@ -234,6 +361,71 @@ function computeProfits(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
     return profits;
 }
 
+function computeProfitsV3(open: SwapLog, close: SwapLog, pool: Pool): Profit[] {
+    // "forward" is the natural profit-taking direction
+    // - open "swap x tok1 for n tok2",
+    // - (target swap tok1 for tok2)
+    // - close "swap n tok2 for y tok1"
+    // where y-x is the profit, in tok1. (This makes most sense when tok1 is
+    // ETH).
+    // But it is also possible to take a profit in the "backward" direction:
+    // - open "swap n tok1 for x tok2",
+    // - (target swap tok1 for tok2)
+    // - close "swap y tok2 for n tok1"
+    // where x-y is the profit, in tok2. (This makes most sense when tok2 is ETH, and
+    // the transaction being sandwiched is swapExactTokensForEth.)
+
+    let forward: Profit;
+    let backward: Profit;
+    let p: BigNumber;
+    switch (open.swapV3.dir) {
+        case SwapDir.ZeroToOne:
+            p = close.swapV3.amount0.add(open.swapV3.amount0).mul('-1');
+            forward = {
+                amount: utils.formatUnits(p, pool.token0.decimals),
+                currency: pool.token0.symbol,
+                cgId: pool.token0.cgId,
+            };
+            p = open.swapV3.amount1.add(close.swapV3.amount1).mul('-1');
+            backward = {
+                amount: utils.formatUnits(p, pool.token1.decimals),
+                currency: pool.token1.symbol,
+                cgId: pool.token1.cgId,
+            };
+            break;
+        case SwapDir.OneToZero:
+            p = close.swapV3.amount1.add(open.swapV3.amount1).mul('-1');
+            forward = {
+                amount: utils.formatUnits(p, pool.token1.decimals),
+                currency: pool.token1.symbol,
+                cgId: pool.token1.cgId,
+            };
+            p = open.swapV3.amount0.add(close.swapV3.amount0).mul('-1');
+            backward = {
+                amount: utils.formatUnits(p, pool.token0.decimals),
+                currency: pool.token0.symbol,
+                cgId: pool.token0.cgId,
+            };
+    }
+    let profits: Profit[] = [];
+    if (forward.amount != '0.0') {
+        profits.push(forward);
+    }
+    if (backward.amount != '0.0') {
+        profits.push(backward);
+    }
+    if (profits.length == 0) {
+        profits = [
+            {
+                amount: '0.0',
+                currency: 'WETH',
+                cgId: 'weth',
+            },
+        ];
+    }
+    return profits;
+}
+
 function areClose(a: BigNumber, b: BigNumber): boolean {
     return b.lt(a.mul(96).div(100)) || b.gt(a.mul(104).div(100));
 }
@@ -249,6 +441,7 @@ function checkProfitTooBig(swap: SwapInfo, profits: Profit[]): boolean {
             profit.currency == swap.currencyIn
                 ? parseFloat(swap.amountIn)
                 : parseFloat(swap.amountOut);
+        console.log('check too big', pn, swapn)
         if (pn > swapn / 2) {
             return true;
         }
@@ -270,6 +463,18 @@ function checkMismatched(open: SwapLog, close: SwapLog): boolean {
         d = open.swap.amount1In;
     }
     if (areClose(a, b) && areClose(c, d)) {
+        return true;
+    }
+    return false;
+}
+
+function checkMismatchedV3(open: SwapLog, close: SwapLog): boolean {
+    let a: BigNumber, b: BigNumber, c: BigNumber, d: BigNumber;
+    a = open.swapV3.amount1;
+    b = close.swapV3.amount0;
+    c = close.swapV3.amount1;
+    d = open.swapV3.amount0;
+    if (areClose(a.add(c), BigNumber.from(0)) && areClose(b.add(d), BigNumber.from(0))) {
         return true;
     }
     return false;
