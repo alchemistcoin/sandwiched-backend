@@ -124,24 +124,13 @@ export function decodeV3SwapLog(web3: Web3, log: Log): SwapLog {
         .mapValues((value) => V3ABIs.JSON[value])
         .value();
 
-    // const abi = [
-    //     'event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address indexed to)'
-    // ]
-    // const iface = new utils.Interface(abi)
-    // const logDesc = iface.parseLog({topics: r.topics, data: r.data});
-    // console.log("parsed log");
-    // console.log(JSON.stringify(logDesc, null, 2));
-
-    // console.log("decoded log");
-    // console.log(JSON.stringify(iface.decodeEventLog("Swap", r.data, r.topics), null, 2));
-
     const decoded = web3.eth.abi.decodeLog(
         sigToJSON[log.topics[0]],
         log.data,
         log.topics.slice(1),
     );
     decoded.event = sigToName[log.topics[0]];
-    console.log('decoded', decoded, log.transactionHash)
+
     const bignums = _.mapValues(
         _.pick(decoded, ['amount0', 'amount1', 'sqrtPriceX96', 'liquidity', 'tick']),
         BigNumber.from,
@@ -149,7 +138,7 @@ export function decodeV3SwapLog(web3: Web3, log: Log): SwapLog {
     const dir = bignums.amount0.lt(bignums.amount1)
         ? SwapDir.OneToZero
         : SwapDir.ZeroToOne;
-    console.log('dir', dir)
+        
     return {
         ...log,
         swapV3: {

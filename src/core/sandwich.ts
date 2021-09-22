@@ -183,7 +183,6 @@ export async function findV3Sandwich(
         ]);
 
         if (checkProfitTooBig(targetSI, profits)) {
-            console.log('profit too big', profits)
             continue;
         }
         let mev = false;
@@ -441,7 +440,6 @@ function checkProfitTooBig(swap: SwapInfo, profits: Profit[]): boolean {
             profit.currency == swap.currencyIn
                 ? parseFloat(swap.amountIn)
                 : parseFloat(swap.amountOut);
-        console.log('check too big', pn, swapn)
         if (pn > swapn / 2) {
             return true;
         }

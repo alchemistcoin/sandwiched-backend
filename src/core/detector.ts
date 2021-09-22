@@ -36,7 +36,6 @@ export async function detectTransaction(
             }
             if (log.topics[0] == V3ABIs.Binary.Swap) {
                 swap = decodeV3SwapLog(web3, log);
-                console.log('v3 swap', swap)
                 break;
             }
         }
