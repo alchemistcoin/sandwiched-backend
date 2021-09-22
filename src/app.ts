@@ -79,6 +79,7 @@ app.use(
 app.use(helmet());
 
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 app.use(cors());
 app.options('*', cors());
@@ -147,6 +148,24 @@ app.get(
         await detect(web3, logger, write, wallet, fromBlock, toBlock);
 
         res.end();
+    }),
+);
+
+app.post(
+    '/transactions',
+    catchAsync(async function (req, res, _next): Promise<void> {
+        const txs = req.body.data;
+        const txsRes = {};
+        for (const tx of txs) {
+            const write = (obj: any) => {
+                if (!txsRes[tx]) txsRes[tx] = [];
+                txsRes[tx].push(obj);
+            };
+            if (web3.utils.isHexStrict(tx)) {
+                await detectTransaction(web3, logger, write, tx);
+            }
+        }
+        res.json(txsRes);
     }),
 );
 
