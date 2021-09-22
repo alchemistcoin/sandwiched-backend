@@ -473,11 +473,10 @@ function checkMismatched(open: SwapLog, close: SwapLog): boolean {
 }
 
 function checkMismatchedV3(open: SwapLog, close: SwapLog): boolean {
-    let a: BigNumber, b: BigNumber, c: BigNumber, d: BigNumber;
-    a = open.swapV3.amount1;
-    b = close.swapV3.amount0;
-    c = close.swapV3.amount1;
-    d = open.swapV3.amount0;
+    const a = open.swapV3.amount1;
+    const b = close.swapV3.amount0;
+    const c = close.swapV3.amount1;
+    const d = open.swapV3.amount0;
     if (
         areClose(a.add(c), BigNumber.from(0)) &&
         areClose(b.add(d), BigNumber.from(0))

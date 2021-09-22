@@ -153,7 +153,7 @@ app.get(
 
 app.post(
     '/transactions',
-    catchAsync(async function (req, res, _next): Promise<void> {
+    catchAsync(async function (req, res): Promise<void> {
         const txs = req.body.data;
         const txsRes = {};
         for (const tx of txs) {
