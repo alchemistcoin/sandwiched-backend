@@ -6,7 +6,7 @@ import { BigNumber } from 'ethers';
 
 import { getLogs } from './logs';
 import * as ABIs from './abis';
-import * as V3ABIs from './abisV3'
+import * as V3ABIs from './abisV3';
 
 export enum SwapDir {
     ZeroToOne,
@@ -33,7 +33,7 @@ interface V3SwapParams {
     liquidity: BigNumber;
     tick: BigNumber;
     event: string;
-    dir: SwapDir
+    dir: SwapDir;
 }
 
 export interface SwapLog extends Log {
@@ -118,7 +118,6 @@ export function decodeSwapLog(web3: Web3, log: Log): SwapLog {
 }
 
 export function decodeV3SwapLog(web3: Web3, log: Log): SwapLog {
-
     const sigToName = _.invert(V3ABIs.Binary);
     const sigToJSON = _.chain(sigToName)
         .mapValues((value) => V3ABIs.JSON[value])
@@ -132,13 +131,19 @@ export function decodeV3SwapLog(web3: Web3, log: Log): SwapLog {
     decoded.event = sigToName[log.topics[0]];
 
     const bignums = _.mapValues(
-        _.pick(decoded, ['amount0', 'amount1', 'sqrtPriceX96', 'liquidity', 'tick']),
+        _.pick(decoded, [
+            'amount0',
+            'amount1',
+            'sqrtPriceX96',
+            'liquidity',
+            'tick',
+        ]),
         BigNumber.from,
     );
     const dir = bignums.amount0.lt(bignums.amount1)
         ? SwapDir.OneToZero
         : SwapDir.ZeroToOne;
-        
+
     return {
         ...log,
         swapV3: {

@@ -93,11 +93,17 @@ async function SwapV3InfoFromLog(log: SwapLog): Promise<SwapInfo> {
 
     const [amountOut, currencyOut] = log.swapV3.amount0.gt(log.swapV3.amount1)
         ? [
-              utils.formatUnits(log.swapV3.amount1.mul('-1'), pool.token1.decimals),
+              utils.formatUnits(
+                  log.swapV3.amount1.mul('-1'),
+                  pool.token1.decimals,
+              ),
               pool.token1.symbol,
           ]
         : [
-              utils.formatUnits(log.swapV3.amount0.mul('-1'), pool.token0.decimals),
+              utils.formatUnits(
+                  log.swapV3.amount0.mul('-1'),
+                  pool.token0.decimals,
+              ),
               pool.token0.symbol,
           ];
 
@@ -472,7 +478,10 @@ function checkMismatchedV3(open: SwapLog, close: SwapLog): boolean {
     b = close.swapV3.amount0;
     c = close.swapV3.amount1;
     d = open.swapV3.amount0;
-    if (areClose(a.add(c), BigNumber.from(0)) && areClose(b.add(d), BigNumber.from(0))) {
+    if (
+        areClose(a.add(c), BigNumber.from(0)) &&
+        areClose(b.add(d), BigNumber.from(0))
+    ) {
         return true;
     }
     return false;

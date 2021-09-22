@@ -51,7 +51,6 @@ export async function detectTransaction(
         } else {
             sws = await findSandwich(web3, logger, swap, searchWindow);
         }
-        
     } catch (e) {
         logger.error(e);
         return;
