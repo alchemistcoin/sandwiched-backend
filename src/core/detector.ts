@@ -3,13 +3,14 @@ import winston from 'winston';
 import _ from 'lodash';
 
 import { addresses } from './addresses';
-import { decodeSwapLog, getSwaps, SwapLog } from './swaps';
+import { decodeSwapLog, decodeV3SwapLog, getSwaps, SwapLog } from './swaps';
 import { getTransfers, TransferLog } from './transfers';
-import { Sandwich, findSandwich } from './sandwich';
+import { Sandwich, findSandwich, findV3Sandwich } from './sandwich';
 import { PoolService } from '../services/pools';
 import { SandwichCache } from '../services/sandwichcache';
 import { uniswapPairs, sushiswapPairs } from './pair-lists';
 import * as ABIs from './abis';
+import * as V3ABIs from './abisV3';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type messageWriter = (o: any) => void;
@@ -28,9 +29,15 @@ export async function detectTransaction(
     }
     let swap: SwapLog;
     for (const log of receipt.logs) {
-        if (log.topics.length && log.topics[0] == ABIs.Binary.Swap) {
-            swap = decodeSwapLog(web3, log);
-            break;
+        if (log.topics.length) {
+            if (log.topics[0] == ABIs.Binary.Swap) {
+                swap = decodeSwapLog(web3, log);
+                break;
+            }
+            if (log.topics[0] == V3ABIs.Binary.Swap) {
+                swap = decodeV3SwapLog(web3, log);
+                break;
+            }
         }
     }
     if (swap == null) {
@@ -39,7 +46,11 @@ export async function detectTransaction(
     }
     let sws: Sandwich[];
     try {
-        sws = await findSandwich(web3, logger, swap, searchWindow);
+        if (swap.swapV3) {
+            sws = await findV3Sandwich(web3, logger, swap, searchWindow);
+        } else {
+            sws = await findSandwich(web3, logger, swap, searchWindow);
+        }
     } catch (e) {
         logger.error(e);
         return;

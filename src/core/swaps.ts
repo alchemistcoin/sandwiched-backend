@@ -6,13 +6,14 @@ import { BigNumber } from 'ethers';
 
 import { getLogs } from './logs';
 import * as ABIs from './abis';
+import * as V3ABIs from './abisV3';
 
 export enum SwapDir {
     ZeroToOne,
     OneToZero,
 }
 
-interface SwapParams {
+interface V2SwapParams {
     sender: string;
     amount0In: BigNumber; // switch to bignumber when we switch to ethers
     amount1In: BigNumber;
@@ -23,8 +24,21 @@ interface SwapParams {
     dir: SwapDir;
 }
 
+interface V3SwapParams {
+    sender: string;
+    recipient: string;
+    amount0: BigNumber; // switch to bignumber when we switch to ethers
+    amount1: BigNumber;
+    sqrtPriceX96: BigNumber;
+    liquidity: BigNumber;
+    tick: BigNumber;
+    event: string;
+    dir: SwapDir;
+}
+
 export interface SwapLog extends Log {
-    swap: SwapParams;
+    swap?: V2SwapParams;
+    swapV3?: V3SwapParams;
 }
 
 export function decodeSwapLog(web3: Web3, log: Log): SwapLog {
@@ -103,6 +117,43 @@ export function decodeSwapLog(web3: Web3, log: Log): SwapLog {
     };
 }
 
+export function decodeV3SwapLog(web3: Web3, log: Log): SwapLog {
+    const sigToName = _.invert(V3ABIs.Binary);
+    const sigToJSON = _.chain(sigToName)
+        .mapValues((value) => V3ABIs.JSON[value])
+        .value();
+
+    const decoded = web3.eth.abi.decodeLog(
+        sigToJSON[log.topics[0]],
+        log.data,
+        log.topics.slice(1),
+    );
+    decoded.event = sigToName[log.topics[0]];
+
+    const bignums = _.mapValues(
+        _.pick(decoded, [
+            'amount0',
+            'amount1',
+            'sqrtPriceX96',
+            'liquidity',
+            'tick',
+        ]),
+        BigNumber.from,
+    );
+    const dir = bignums.amount0.lt(bignums.amount1)
+        ? SwapDir.OneToZero
+        : SwapDir.ZeroToOne;
+
+    return {
+        ...log,
+        swapV3: {
+            ...bignums,
+            ..._.pick(decoded, ['sender', 'recipient', 'event']),
+            dir,
+        },
+    };
+}
+
 export async function getSwaps(
     web3: Web3,
     log: winston.Logger,
@@ -125,6 +176,36 @@ export async function getSwaps(
     const all = await getLogs(web3, log, fromBlock, toBlock, pool, topics);
 
     const swaplogs: SwapLog[] = all.map((r) => decodeSwapLog(web3, r));
+    const sorted = _.sortBy(swaplogs, 'blockNumber', 'transactionIndex');
+    if (!_.isEqual(sorted, swaplogs)) {
+        // don't expect this to happen, but check for sanity.
+        throw 'Not sorted!';
+    }
+    return swaplogs;
+}
+
+export async function getV3Swaps(
+    web3: Web3,
+    log: winston.Logger,
+    pool: string = null,
+    routers: string[] = null,
+    wallet: string = null,
+    fromBlock = 0,
+    toBlock = 99999999,
+): Promise<SwapLog[]> {
+    const topics = [
+        V3ABIs.Binary.Swap, // or with ethers: utils.id('Swap(address,uint256,uint256,uint256,uint256,address)')
+        routers
+            ? routers.map((router) =>
+                  web3.eth.abi.encodeParameter('address', router),
+              )
+            : null,
+        wallet ? web3.eth.abi.encodeParameter('address', wallet) : null,
+    ];
+
+    const all = await getLogs(web3, log, fromBlock, toBlock, pool, topics);
+
+    const swaplogs: SwapLog[] = all.map((r) => decodeV3SwapLog(web3, r));
     const sorted = _.sortBy(swaplogs, 'blockNumber', 'transactionIndex');
     if (!_.isEqual(sorted, swaplogs)) {
         // don't expect this to happen, but check for sanity.
