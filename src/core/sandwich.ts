@@ -263,7 +263,7 @@ export async function findV3Sandwich(
         }
         res.push(sw);
     }
-    if (!res.length) {
+    if (!res.length && targetSI && pool) {
         const sw: Sandwich = {
             message: 'No sandwich found',
             ts: targetSI.ts,
@@ -360,7 +360,7 @@ export async function findSandwich(
         }
         res.push(sw);
     }
-    if (!res.length) {
+    if (!res.length && targetSI && pool) {
         const sw: Sandwich = {
             message: 'No sandwich found',
             ts: targetSI.ts,
