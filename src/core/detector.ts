@@ -216,7 +216,7 @@ export async function detect(
             }
             if (sws.length) seen[swap.transactionHash] = 1;
             for (let i = 0; i < sws.length; i++) {
-                const sw: Sandwich = sws[i]
+                const sw: Sandwich = sws[i];
                 if (sw.profit) {
                     writeSandwich(sw);
                 }
