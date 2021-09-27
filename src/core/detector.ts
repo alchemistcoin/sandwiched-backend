@@ -215,12 +215,12 @@ export async function detect(
                 continue;
             }
             if (sws.length) seen[swap.transactionHash] = 1;
-            sws.forEach((sw: Sandwich) => {
+            for (let i = 0; i < sws.length; i++) {
+                const sw: Sandwich = sws[i]
                 if (sw.profit) {
                     writeSandwich(sw);
                 }
-            });
-            // sws.forEach(writeSandwich);
+            }
         }
     }
     SandwichCache.cache(
