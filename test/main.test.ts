@@ -116,29 +116,66 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
+                ts: 'Fri, 09 Apr 2021 22:46:38 GMT',
                 open: {
                     amountIn: '20.0',
+                    amountInRaw: {
+                        hex: '0x01158e460913d00000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '8226.342643528036846659',
+                    amountOutRaw: {
+                        hex: '0x01bdf3700941e8810c43',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'WETH',
+                    currencyInAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     currencyOut: 'B20',
+                    currencyOutAddress:
+                        '0xc4De189Abf94c57f396bD4c52ab13b954FebEfD8',
                     ts: 'Fri, 09 Apr 2021 22:46:38 GMT',
                     tx:
                         '0x0bcd7d7fd9895023002c5181d39e5de167ee179813dc63c385d5e64d26758ec1',
                 },
                 target: {
                     amountIn: '30.0',
+                    amountInRaw: {
+                        hex: '0x01a055690d9db80000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '11331.416153131322048365',
+                    amountOutRaw: {
+                        hex: '0x026646fd2adb6bc9ff6d',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'WETH',
+                    currencyInAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     currencyOut: 'B20',
+                    currencyOutAddress:
+                        '0xc4De189Abf94c57f396bD4c52ab13b954FebEfD8',
                     ts: 'Fri, 09 Apr 2021 22:46:38 GMT',
                     tx:
                         '0x320fbc4a1de7324a39278aa8213f392364a6dd0546b62fd45f2ccb84558598bf',
                 },
                 close: {
                     amountIn: '8226.342643528036846659',
+                    amountInRaw: {
+                        hex: '0x01bdf3700941e8810c43',
+                        type: 'BigNumber',
+                    },
                     amountOut: '21.770266036457971241',
+                    amountOutRaw: {
+                        hex: '0x012e1f859dc8d41e29',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'B20',
+                    currencyInAddress:
+                        '0xc4De189Abf94c57f396bD4c52ab13b954FebEfD8',
                     currencyOut: 'WETH',
+                    currencyOutAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     ts: 'Fri, 09 Apr 2021 22:47:37 GMT',
                     tx:
                         '0x53d2e9170eb2a21330ddbfc5a4e9e02e31de3e76738cd1659946256abcb417f7',
@@ -162,29 +199,66 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
+                ts: 'Mon, 22 Feb 2021 18:41:58 GMT',
                 open: {
                     amountIn: '220.0',
+                    amountInRaw: {
+                        hex: '0x0bed1d0263d9f00000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '1234.077701279797405074',
+                    amountOutRaw: {
+                        hex: '0x42e644bae3dcf2e592',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'WETH',
+                    currencyInAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     currencyOut: 'FARM',
+                    currencyOutAddress:
+                        '0xa0246c9032bC3A600820415aE600c6388619A14D',
                     ts: 'Mon, 22 Feb 2021 18:41:58 GMT',
                     tx:
                         '0x699de2603b40fea219afeccf388ea6c66b36758d89ab1eebb3324239ee442378',
                 },
                 target: {
                     amountIn: '153.0',
+                    amountInRaw: {
+                        hex: '0x084b4d315f0ac40000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '782.613521863157224673',
+                    amountOutRaw: {
+                        hex: '0x2a6cf1c3ab9ee414e1',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'WETH',
+                    currencyInAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     currencyOut: 'FARM',
+                    currencyOutAddress:
+                        '0xa0246c9032bC3A600820415aE600c6388619A14D',
                     ts: 'Mon, 22 Feb 2021 18:41:58 GMT',
                     tx:
                         '0xd82a86f8324fba7e0d374b461d6faf0c39a0d53fde06505d6c2cb8447609c617',
                 },
                 close: {
                     amountIn: '1234.077701279797405074',
+                    amountInRaw: {
+                        hex: '0x42e644bae3dcf2e592',
+                        type: 'BigNumber',
+                    },
                     amountOut: '234.320954423950744728',
+                    amountOutRaw: {
+                        hex: '0x0cb3db42901e149c98',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'FARM',
+                    currencyInAddress:
+                        '0xa0246c9032bC3A600820415aE600c6388619A14D',
                     currencyOut: 'WETH',
+                    currencyOutAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     ts: 'Mon, 22 Feb 2021 18:42:35 GMT',
                     tx:
                         '0x62fedc4df9aebe7cdf7965fe1e35de7d657c94db2c55551c1954eb823a0351b6',
@@ -208,29 +282,66 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
+                ts: 'Sun, 07 Feb 2021 04:48:56 GMT',
                 open: {
                     amountIn: '42.0',
+                    amountInRaw: {
+                        hex: '0x0246ddf97976680000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '33327.249924402182844634',
+                    amountOutRaw: {
+                        hex: '0x070eac80aee7f02b70da',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'ibETH',
+                    currencyInAddress:
+                        '0x67B66C99D3Eb37Fa76Aa3Ed1ff33E8e39F0b9c7A',
                     currencyOut: 'ALPHA',
+                    currencyOutAddress:
+                        '0xa1faa113cbE53436Df28FF0aEe54275c13B40975',
                     ts: 'Sun, 07 Feb 2021 04:48:56 GMT',
                     tx:
                         '0xe1f01378c5e9e825bd428cd755e68e01f46314a0d7926c940cd9218578a12139',
                 },
                 target: {
                     amountIn: '290.0',
+                    amountInRaw: {
+                        hex: '0x0fb88ef7839f480000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '225702.625345847900102161',
+                    amountOutRaw: {
+                        hex: '0x2fcb5d246849f4b1de11',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'ibETH',
+                    currencyInAddress:
+                        '0x67B66C99D3Eb37Fa76Aa3Ed1ff33E8e39F0b9c7A',
                     currencyOut: 'ALPHA',
+                    currencyOutAddress:
+                        '0xa1faa113cbE53436Df28FF0aEe54275c13B40975',
                     ts: 'Sun, 07 Feb 2021 04:48:56 GMT',
                     tx:
                         '0x68dd28d3ce2a5ef90680f5b4e3b86af2501973d2107b642f0f075d92131a56c5',
                 },
                 close: {
                     amountIn: '33327.249924402182844634',
+                    amountInRaw: {
+                        hex: '0x070eac80aee7f02b70da',
+                        type: 'BigNumber',
+                    },
                     amountOut: '43.026020662373103583',
+                    amountOutRaw: {
+                        hex: '0x02551b21d4af5db7df',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'ALPHA',
+                    currencyInAddress:
+                        '0xa1faa113cbE53436Df28FF0aEe54275c13B40975',
                     currencyOut: 'ibETH',
+                    currencyOutAddress:
+                        '0x67B66C99D3Eb37Fa76Aa3Ed1ff33E8e39F0b9c7A',
                     ts: 'Sun, 07 Feb 2021 04:50:13 GMT',
                     tx:
                         '0x5a54f6726c168aedf1171ce686dd5d05d03bb99de212e30d5da05ea316bdec64',
@@ -254,29 +365,66 @@ describe('sandwiched-wtf API', () => {
             expect(sws.length).toEqual(1);
             expect(sws[0]).toEqual({
                 message: 'Sandwich found',
+                ts: 'Mon, 26 Apr 2021 14:23:33 GMT',
                 open: {
                     amountIn: '28544.179912330024570403',
+                    amountInRaw: {
+                        hex: '0x060b62126cb7a7d3ce23',
+                        type: 'BigNumber',
+                    },
                     amountOut: '12.061108125344495256',
+                    amountOutRaw: {
+                        hex: '0xa761a9f000bc7698',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'GYSR',
+                    currencyInAddress:
+                        '0xbEa98c05eEAe2f3bC8c3565Db7551Eb738c8CCAb',
                     currencyOut: 'WETH',
+                    currencyOutAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     ts: 'Mon, 26 Apr 2021 14:23:33 GMT',
                     tx:
                         '0x81702040406fb63a7a1b1ec1a895c9d1357637f5bc2381fed34dba27e7880b18',
                 },
                 target: {
                     amountIn: '65207.951835566551907693',
+                    amountInRaw: {
+                        hex: '0x0dceee1e73e97d64bd6d',
+                        type: 'BigNumber',
+                    },
                     amountOut: '25.671834777932286375',
+                    amountOutRaw: {
+                        hex: '0x016444adb71f2c49a7',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'GYSR',
+                    currencyInAddress:
+                        '0xbEa98c05eEAe2f3bC8c3565Db7551Eb738c8CCAb',
                     currencyOut: 'WETH',
+                    currencyOutAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     ts: 'Mon, 26 Apr 2021 14:23:33 GMT',
                     tx:
                         '0xef82677d92db48e8285b9541584531e3cd53137213217257c705ce307d0e2a7e',
                 },
                 close: {
                     amountIn: '12.021306468530860032',
+                    amountInRaw: {
+                        hex: '0xa6d4428aa0e33000',
+                        type: 'BigNumber',
+                    },
                     amountOut: '31144.006048709295916377',
+                    amountOutRaw: {
+                        hex: '0x069851e84d48fe8ec559',
+                        type: 'BigNumber',
+                    },
                     currencyIn: 'WETH',
+                    currencyInAddress:
+                        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
                     currencyOut: 'GYSR',
+                    currencyOutAddress:
+                        '0xbEa98c05eEAe2f3bC8c3565Db7551Eb738c8CCAb',
                     ts: 'Mon, 26 Apr 2021 14:24:14 GMT',
                     tx:
                         '0xfcf39b2ac09995aa8cbe8075f5cdbf6d6f37043d5c6f1955966c2d63ae43852f',
