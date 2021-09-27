@@ -23,9 +23,13 @@ interface SwapInfo {
     tx: string;
     ts: string;
     amountIn: string;
+    amountInRaw: BigNumber;
     currencyIn: string;
+    currencyInAddress: string;
     amountOut: string;
+    amountOutRaw: BigNumber;
     currencyOut: string;
+    currencyOutAddress: string;
 }
 
 async function SwapInfoFromLog(log: SwapLog): Promise<SwapInfo> {
@@ -40,33 +44,55 @@ async function SwapInfoFromLog(log: SwapLog): Promise<SwapInfo> {
             ? block.timestamp
             : new Date(block.timestamp * 1000).toUTCString();
 
-    const [amountIn, currencyIn] = log.swap.amount0In.isZero()
+    const [
+        amountIn,
+        amountInRaw,
+        currencyIn,
+        currencyInAddress,
+    ] = log.swap.amount0In.isZero()
         ? [
               utils.formatUnits(log.swap.amount1In, pool.token1.decimals),
+              log.swap.amount1In,
               pool.token1.symbol,
+              pool.token1.address,
           ]
         : [
               utils.formatUnits(log.swap.amount0In, pool.token0.decimals),
+              log.swap.amount0In,
               pool.token0.symbol,
+              pool.token0.address,
           ];
 
-    const [amountOut, currencyOut] = log.swap.amount0Out.isZero()
+    const [
+        amountOut,
+        amountOutRaw,
+        currencyOut,
+        currencyOutAddress,
+    ] = log.swap.amount0Out.isZero()
         ? [
               utils.formatUnits(log.swap.amount1Out, pool.token1.decimals),
+              log.swap.amount1Out,
               pool.token1.symbol,
+              pool.token1.address,
           ]
         : [
               utils.formatUnits(log.swap.amount0Out, pool.token0.decimals),
+              log.swap.amount0Out,
               pool.token0.symbol,
+              pool.token0.address,
           ];
 
     return {
         tx: log.transactionHash,
         ts,
         amountIn,
+        amountInRaw,
         currencyIn,
+        currencyInAddress,
         amountOut,
+        amountOutRaw,
         currencyOut,
+        currencyOutAddress,
     };
 }
 
@@ -81,52 +107,75 @@ async function SwapV3InfoFromLog(log: SwapLog): Promise<SwapInfo> {
         typeof block.timestamp === 'string'
             ? block.timestamp
             : new Date(block.timestamp * 1000).toUTCString();
-    const [amountIn, currencyIn] = log.swapV3.amount0.lt(log.swapV3.amount1)
+    const [
+        amountIn,
+        amountInRaw,
+        currencyIn,
+        currencyInAddress,
+    ] = log.swapV3.amount0.lt(log.swapV3.amount1)
         ? [
               utils.formatUnits(log.swapV3.amount1, pool.token1.decimals),
+              log.swapV3.amount1,
               pool.token1.symbol,
+              pool.token1.address,
           ]
         : [
               utils.formatUnits(log.swapV3.amount0, pool.token0.decimals),
+              log.swapV3.amount0,
               pool.token0.symbol,
+              pool.token0.address,
           ];
 
-    const [amountOut, currencyOut] = log.swapV3.amount0.gt(log.swapV3.amount1)
+    const [
+        amountOut,
+        amountOutRaw,
+        currencyOut,
+        currencyOutAddress,
+    ] = log.swapV3.amount0.gt(log.swapV3.amount1)
         ? [
               utils.formatUnits(
                   log.swapV3.amount1.mul('-1'),
                   pool.token1.decimals,
               ),
+              log.swapV3.amount1,
               pool.token1.symbol,
+              pool.token1.address,
           ]
         : [
               utils.formatUnits(
                   log.swapV3.amount0.mul('-1'),
                   pool.token0.decimals,
               ),
+              log.swapV3.amount0,
               pool.token0.symbol,
+              pool.token0.address,
           ];
 
     return {
         tx: log.transactionHash,
         ts,
         amountIn,
+        amountInRaw,
         currencyIn,
+        currencyInAddress,
         amountOut,
+        amountOutRaw,
         currencyOut,
+        currencyOutAddress,
     };
 }
 
 export interface Sandwich {
     message: string;
-    open: SwapInfo;
+    ts: string;
     target: SwapInfo;
-    close: SwapInfo;
-    profit: Profit;
-    profit2?: Profit;
-    dex: string;
     pool: string;
-    mev: boolean;
+    dex: string;
+    open?: SwapInfo;
+    close?: SwapInfo;
+    profit?: Profit;
+    profit2?: Profit;
+    mev?: boolean;
 }
 
 const bundle_limit = 5;
@@ -154,6 +203,8 @@ export async function findV3Sandwich(
             cand.transactionIndex < target.transactionIndex
         );
     });
+    const pool = await PoolService.lookup(target.address);
+    const targetSI = await SwapV3InfoFromLog(target);
     for (const open of openCandidates) {
         const closes = swaps.filter((cand) => {
             return (
@@ -177,14 +228,12 @@ export async function findV3Sandwich(
             continue;
         }
 
-        const pool = await PoolService.lookup(open.address);
         if (pool === null) {
             throw new Error('null pool');
         }
         const profits = computeProfitsV3(open, close, pool);
-        const [openSI, targetSI, closeSI] = await Promise.all([
+        const [openSI, closeSI] = await Promise.all([
             SwapV3InfoFromLog(open),
-            SwapV3InfoFromLog(target),
             SwapV3InfoFromLog(close),
         ]);
 
@@ -200,6 +249,7 @@ export async function findV3Sandwich(
         }
         const sw: Sandwich = {
             message: 'Sandwich found',
+            ts: targetSI.ts,
             open: openSI,
             target: targetSI,
             close: closeSI,
@@ -211,6 +261,16 @@ export async function findV3Sandwich(
         if (profits[1] != undefined) {
             sw.profit2 = profits[1];
         }
+        res.push(sw);
+    }
+    if (!res.length && targetSI && pool) {
+        const sw: Sandwich = {
+            message: 'No sandwich found',
+            ts: targetSI.ts,
+            target: targetSI,
+            pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
+            dex: pool.dex,
+        };
         res.push(sw);
     }
     return res;
@@ -239,6 +299,9 @@ export async function findSandwich(
             cand.transactionIndex < target.transactionIndex
         );
     });
+
+    const pool = await PoolService.lookup(target.address);
+    const targetSI = await SwapInfoFromLog(target);
     for (const open of openCandidates) {
         const closes = swaps.filter((cand) => {
             return (
@@ -262,14 +325,12 @@ export async function findSandwich(
             continue;
         }
 
-        const pool = await PoolService.lookup(open.address);
         if (pool === null) {
             throw new Error('null pool');
         }
         const profits = computeProfits(open, close, pool);
-        const [openSI, targetSI, closeSI] = await Promise.all([
+        const [openSI, closeSI] = await Promise.all([
             SwapInfoFromLog(open),
-            SwapInfoFromLog(target),
             SwapInfoFromLog(close),
         ]);
 
@@ -285,6 +346,7 @@ export async function findSandwich(
         }
         const sw: Sandwich = {
             message: 'Sandwich found',
+            ts: targetSI.ts,
             open: openSI,
             target: targetSI,
             close: closeSI,
@@ -296,6 +358,16 @@ export async function findSandwich(
         if (profits[1] != undefined) {
             sw.profit2 = profits[1];
         }
+        res.push(sw);
+    }
+    if (!res.length && targetSI && pool) {
+        const sw: Sandwich = {
+            message: 'No sandwich found',
+            ts: targetSI.ts,
+            target: targetSI,
+            pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
+            dex: pool.dex,
+        };
         res.push(sw);
     }
     return res;

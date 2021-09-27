@@ -214,8 +214,15 @@ export async function detect(
                 logger.error(e);
                 continue;
             }
-            if (sws.length) seen[swap.transactionHash] = 1;
-            sws.forEach(writeSandwich);
+            let sandwichFound = false;
+            for (let i = 0; i < sws.length; i++) {
+                const sw: Sandwich = sws[i];
+                if (sw.profit) {
+                    sandwichFound = true;
+                    writeSandwich(sw);
+                }
+            }
+            if (sws.length && sandwichFound) seen[swap.transactionHash] = 1;
         }
     }
     SandwichCache.cache(
