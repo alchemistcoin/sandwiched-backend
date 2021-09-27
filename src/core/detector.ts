@@ -215,7 +215,12 @@ export async function detect(
                 continue;
             }
             if (sws.length) seen[swap.transactionHash] = 1;
-            sws.forEach(writeSandwich);
+            sws.forEach((sw: Sandwich) => {
+                if (sw.profit) {
+                    writeSandwich(sw);
+                }
+            });
+            // sws.forEach(writeSandwich);
         }
     }
     SandwichCache.cache(
