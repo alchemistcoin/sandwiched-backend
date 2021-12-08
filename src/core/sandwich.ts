@@ -175,6 +175,7 @@ export interface Sandwich {
     close?: SwapInfo;
     profit?: Profit;
     profit2?: Profit;
+    botContract?: string;
     mev?: boolean;
 }
 
@@ -257,6 +258,7 @@ export async function findV3Sandwich(
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
             dex: pool.dex,
             mev,
+            botContract: open.swapV3.recipient,
         };
         if (profits[1] != undefined) {
             sw.profit2 = profits[1];
@@ -354,6 +356,7 @@ export async function findSandwich(
             pool: `${pool.token0.symbol} - ${pool.token1.symbol}`,
             dex: pool.dex,
             mev,
+            botContract: open.swap.to,
         };
         if (profits[1] != undefined) {
             sw.profit2 = profits[1];
