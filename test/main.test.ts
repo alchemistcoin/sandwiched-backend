@@ -188,6 +188,7 @@ describe('sandwiched-wtf API', () => {
                 pool: 'WETH - B20',
                 dex: 'UniswapV2',
                 mev: false,
+                botContract: '0x49307d775728dAF1d4736ab762DE0ceFd035e323',
             });
         });
 
@@ -271,6 +272,7 @@ describe('sandwiched-wtf API', () => {
                 pool: 'FARM - WETH',
                 dex: 'UniswapV2',
                 mev: false,
+                botContract: '0x000000000000084e91743124a982076C59f10084',
             });
         });
 
@@ -354,6 +356,7 @@ describe('sandwiched-wtf API', () => {
                 pool: 'ibETH - ALPHA',
                 dex: 'UniswapV2',
                 mev: false,
+                botContract: '0xf195454Fb296bC5B6732f0eaE46fa8d74e14Dc6B'
             });
         });
 
@@ -445,6 +448,7 @@ describe('sandwiched-wtf API', () => {
                 pool: 'GYSR - WETH',
                 dex: 'UniswapV2',
                 mev: false,
+                botContract: '0xa55a7Ae53e8B045323E248Bc89d5Adc904C2cc1A',
             });
         });
 
